@@ -1,7 +1,8 @@
-HackOS Frontend Architecture
+# **HackOS Frontend Architecture**
 
-Global Structure
+## **Global Structure**
 
+```text
 Landing Page
 │
 ├── Authentication
@@ -11,682 +12,695 @@ Landing Page
 ├── Participant Portal
 │
 └── Reviewer Portal
+```
 
-⸻
+---
 
-ORGANIZER PORTAL
+## **1. ORGANIZER PORTAL**
 
-Organizer Home Dashboard
+### **Organizer Home Dashboard**
 
-Purpose:
-Multi-hackathon overview
+**Purpose:** Multi-hackathon overview
 
-Cards:
+**Cards:**
+- Total Hackathons
+- Active Hackathons
+- Registrations
+- Teams
+- Reviewers
+- Evaluations
+- Bias Alerts
+- Engagement Rate
 
-* Total Hackathons
-* Active Hackathons
-* Registrations
-* Teams
-* Reviewers
-* Evaluations
-* Bias Alerts
-* Engagement Rate
+**Charts:**
+- Registrations Over Time
+- Submission Rate
+- Evaluation Progress
+- Skill Distribution
 
-Charts:
+**Actions:**
+- Create Hackathon
+- View Hackathons
 
-* Registrations Over Time
-* Submission Rate
-* Evaluation Progress
-* Skill Distribution
+---
 
-Actions:
+### **Create Hackathon Wizard**
 
-* Create Hackathon
-* View Hackathons
+#### **Step 1: Basic Information**
+- Hackathon Name
+- Theme
+- Description
+- Registration Start Date
+- Registration End Date
+- Event Start Date
+- Event End Date
+- Minimum Team Size
+- Maximum Team Size
 
-⸻
+*Validation:*
+- Registration end must be before event start
+- Min team size < max team size
+- Event end > event start
 
-Create Hackathon Wizard
+#### **Step 2: Problem Statements**
+For each Problem Statement:
+- Title
+- Domain
+- Description
+- Difficulty Level
 
-Step 1
-Basic Information
+**Required Skill Coverage:**
+- Backend
+- Frontend
+- AI/ML
+- Cloud
+- Security
+- Design
+- Mobile
+- DevOps
 
-Step 2
-Problem Statements
+*Organizer Actions:*
+- Add Problem Statement
+- Edit Problem Statement
+- Delete Problem Statement
 
-Step 3
-Skill Requirements
+#### **Step 3: Evaluation Rubrics**
+**Add Criteria (Example):**
+- Innovation
+- Technical Depth
+- Scalability
+- Impact
+- Presentation
 
-For each problem statement:
+**Weight % Validation:**
+- Total = 100%
 
-Backend
-Frontend
-AI/ML
-Cloud
-Security
-Design
-Mobile
-DevOps
+*Edge Cases:*
+- Weight exceeds 100%
+- Duplicate criteria names
+- Empty criterion
 
-Step 4
-Evaluation Rubric
+#### **Step 4: Reviewer Invitations**
+**Fields:**
+- Email
+- Domain Expertise
+- Organization
 
-Step 5
-Reviewer Invitations
+**Actions:**
+- Send Invite
+- Resend Invite
+- Remove Reviewer
 
-Step 6
-Preview
+#### **Step 5: Publish**
+**Review Summary Display:**
+- Hackathon Details
+- Problem Statements
+- Rubrics
+- Reviewers
 
-Step 7
-Publish
+**Action:** Publish Hackathon
 
-⸻
+**System Generates:**
+- Registration Link
+- Public Hackathon Page
 
-View Hackathons
+---
+
+### **View Hackathons**
 
 Shows all hackathons.
 
-Each card:
+**Each card:**
+- Hackathon Name
+- Status
+- Registrations
+- Teams
+- Submissions
+- Review Progress
+
+**Actions:** View Details
+
+---
+
+### **Individual Hackathon Dashboard**
+
+**Tabs:**
+1. Overview
+2. Registrations
+3. Teams
+4. Submissions
+5. Reviewers
+6. Evaluations
+7. Analytics
+8. Audit Trail
+
+---
+
+### **Registrations Tab**
+
+**Table:**
+- Name
+- College
+- Status
+- Duplicate Risk
+- Face Validation
+
+**Color Codes:**
+- Green = Approved
+- Yellow = Review Required
+- Red = High Risk
+
+**Actions:**
+- Approve
+- Reject
+- View Analysis
+- CSV Export
+
+Clicking Analysis opens:
+
+**Duplicate Breakdown Modal:**
+- Resume Similarity
+- GitHub Similarity
+- Skills Similarity
+- Device Similarity
+- Risk Score
+- Reasoning
+
+**Registration Edge Cases:**
+*Duplicate Detected:*
+- Show: Resume Similarity, GitHub Similarity, College Similarity
+- Organizer can override
+
+*Face Scan Failed:*
+- Status: Manual Verification Required
+- Organizer can manually approve
+
+---
+
+### **Teams Tab**
+
+**Table:**
+- Team Name
+- Coverage Score
+- Problem Statement
+- Members
+- Status
 
-Hackathon Name
-Status
-Registrations
-Teams
-Submissions
-Review Progress
+**Actions:**
+- View Team
+- Download CSV
+
+**Team Edge Cases:**
+- *Team below minimum size:* Show Warning
+- *Team exceeds maximum size:* Block new joins
+
+---
+
+### **Team Detail Page**
+
+**Display:**
+- Team Members
+- Skill Matrix
+- Coverage Score
+- Problem Statement
+- Submission Status
+- Reviewer Assigned
 
-Actions:
+**AI Recommendation Explanation:**
+- Why team is strong
+- Missing skills
+- Potential weaknesses
 
-View Details
+---
 
-⸻
+### **Reviewers Tab**
 
-Individual Hackathon Dashboard
+**Table:**
+- Reviewer
+- Expertise
+- Assignments
+- Workload
+- Consistency
+- Bias Risk
 
-Tabs:
+**Actions:**
+- Reassign
+- Remove
+- View Assignment Logic
 
-Overview
+**Reviewer Assignment Validation:**
+*System Checks:*
+- Expertise Match
+- Workload Balance
+- Conflict Of Interest
 
-Registrations
+*Display:*
+- Expertise Match %
+- Workload %
+- Conflict Status
 
-Teams
+---
 
-Submissions
+### **Reviewer Assignment Screen**
 
-Reviewers
+**Visualization:** Reviewer ←→ Team
 
-Evaluations
+**Show:**
+- Expertise Match %
+- Workload %
+- Conflict Check
+- Assignment Score
 
-Analytics
+**AI Explanation:**
+- Why reviewer was chosen
 
-Audit Trail
+---
 
-⸻
+### **Submissions Tab**
 
-Registrations
+**Display:**
+- Team
+- Submission Status
+- Submitted Time
+- Reviewer Assigned
 
-Table
+**Actions:**
+- View Submission
 
-Name
-College
-Status
-Duplicate Risk
-Face Validation
+---
 
-Actions
+### **Evaluations Tab**
 
-Approve
-Reject
-View Analysis
+**Overview:**
+- Total Evaluations
+- Pending
+- Completed
 
-Clicking Analysis opens
+**Actions:**
+- Generate Results
+- Publish Results
 
-Duplicate Breakdown Modal
+---
 
-Resume Similarity
+### **Analytics Tab**
 
-GitHub Similarity
+**Metrics:**
+- Registration Funnel
+- Team Formation Rate
+- Submission Rate
+- Evaluation Completion
+- Reviewer Performance
+- Bias Alerts
+- Skill Distribution
+- Team Distribution
 
-Skills Similarity
+**Predictive Insights:**
+- Teams likely not to submit
+- Reviewer overload warnings
 
-Device Similarity
+---
 
-Risk Score
+## **2. PARTICIPANT PORTAL**
 
-Reasoning
+### **Participant Authentication**
+Landing Page → Login / Signup → Select Role: Participant → Participant Dashboard
 
-⸻
+---
 
-Teams
+### **Participant Dashboard**
 
-Table
+**Cards:**
+- Registered Hackathons
+- Team Status (Teams)
+- Submission Status (Pending Invites)
+- Notifications
+- Recommendations
 
-Team Name
+**Actions:**
+- Browse Hackathons
+- Create Team
+- Join Team
 
-Coverage Score
+---
 
-Problem Statement
+### **Browse Hackathons**
 
-Members
+**Cards:**
+- Hackathon Name
+- Theme
+- Open Spots
+- Registration Deadline
+- AI Match %
 
-Status
+**Action:** Register
 
-Actions
+---
 
-View Team
+### **Register For Hackathon**
 
-Download CSV
+**Step 1: Profile**
+- Name
+- College
+- Email
+- GitHub (Optional)
+- LinkedIn (Optional)
+- Resume Upload
 
-⸻
+**Step 2: Resume Parsing & Skills**
+- Resume Parsing
+- Skill Extraction (Magic Resume Autofill extracts Skills, Projects, Experience)
+- Preview Extracted Skills
+- Edit Skills
 
-Team Detail Page
+**Step 3: Face Validation**
+- Consent Required
+- Options: Validate with Camera or Skip
+- *If skipped:* Manual Review Queue
 
-Team Members
+**Step 4: Registration Pipeline (Live Progress)**
+- Resume Parsed
+- Skills Extracted
+- Duplicate Check
+- Validation
+- Approval
+- WebSocket Updates
 
-Skill Matrix
+**Registration Status Screen:**
+- Approved
+- Review Required
+- Rejected
 
-Coverage Score
+---
 
-Problem Statement
+### **Post Registration Dashboard**
 
-Submission Status
+**Shows:**
+- Registered Hackathons
+- Registration Status
+- Suggested Problem Statements
+- Suggested Teams
+- Suggested Teammates
 
-Reviewer Assigned
+---
 
-AI Recommendation Explanation
+### **Hackathon Workspace**
 
-Why team is strong
+This becomes the participant’s main screen.
 
-Missing skills
+**Tabs:**
+1. Overview
+2. Team
+3. Recruitment
+4. Submission
+5. Results
 
-Potential weaknesses
+---
 
-⸻
+### **Team Formation & Management**
 
-Reviewers
+**Options:**
+- Create Team
+- Join Team
 
-Table
+---
 
-Reviewer
+### **Create Team**
 
-Expertise
+**Fields:**
+- Team Name
+- Problem Statement
+- Recruiting Status
 
-Assignments
+**Required Roles:**
+- Backend
+- Frontend
+- AI/ML
+- Design
+- Cloud
 
-Workload
+**Actions:** Create, Invite Members
 
-Consistency
+**Team Creation Edge Cases:**
+- *Problem Statement not selected:* Prevent creation
+- *Maximum team size reached:* Disable invitations
 
-Bias Risk
+---
 
-Actions
+### **Invite Members**
 
-Reassign
+**Methods:** Share Invite Code
 
-View Assignment Logic
+**Status:** Pending, Accepted, Rejected
 
-⸻
+---
 
-Reviewer Assignment Screen
-
-Visualization
-
-Reviewer ←→ Team
-
-Show
-
-Expertise Match %
-
-Workload %
-
-Conflict Check
-
-Assignment Score
-
-AI Explanation
-
-Why reviewer was chosen
-
-⸻
-
-Evaluations
-
-Overview
-
-Assigned
-
-Completed
-
-Pending
-
-Generate Results
-
-Publish Results
-
-⸻
-
-Analytics
-
-Registration Funnel
-
-Skill Heatmap
-
-Submission Funnel
-
-Reviewer Performance
-
-Bias Alerts
-
-Predictions
-
-Teams likely not to submit
-
-Reviewer overload prediction
-
-⸻
-
-PARTICIPANT PORTAL
-
-Participant Dashboard
-
-Cards
-
-Registered Hackathons
-
-Teams
-
-Pending Invites
-
-Notifications
-
-Recommendations
-
-⸻
-
-Browse Hackathons
-
-Cards
-
-Hackathon Name
-
-Theme
-
-Open Spots
-
-Registration Deadline
-
-AI Match %
-
-Action
-
-Register
-
-⸻
-
-Register For Hackathon
-
-Step 1
-
-Profile
-
-Name
-
-College
-
-GitHub
-
-LinkedIn
-
-Resume
-
-Step 2
-
-Resume Upload
-
-Resume Parsing
-
-Skill Extraction
-
-Preview Extracted Skills
-
-Edit Skills
-
-Step 3
-
-Face Validation
-
-Consent
-
-Validate
-
-Skip
-
-Step 4
-
-Registration Pipeline
-
-Live Progress
-
-Resume Parsed
-
-Skills Extracted
-
-Duplicate Check
-
-Validation
-
-Approval
-
-WebSocket Updates
-
-⸻
-
-Post Registration Dashboard
-
-Shows
-
-Registered Hackathons
-
-Registration Status
-
-Suggested Problem Statements
-
-Suggested Teams
-
-Suggested Teammates
-
-⸻
-
-Hackathon Workspace
-
-This becomes participant’s main screen.
-
-Tabs
-
-Overview
-
-Team
-
-Recruitment
-
-Submission
-
-Results
-
-⸻
-
-Team Formation
-
-Options
-
-Create Team
-
-Join Team
-
-⸻
-
-Create Team
-
-Team Name
-
-Problem Statement
-
-Recruiting Status
-
-Required Roles
-
-Backend
-
-Frontend
-
-AI/ML
-
-Design
-
-Cloud
-
-⸻
-
-Recruitment Marketplace
-
-Critical Missing Feature
+### **Recruitment Marketplace (Critical Missing Feature)**
 
 Shows recommended participants.
 
-Card
+**Card:**
+- Name
+- Skills
+- Match %
+- Role
+- Coverage Improvement
 
-Name
+**Actions:** Invite
 
-Skills
+**AI Reason:** e.g., "This participant fills backend gap."
 
-Match %
+---
 
-Role
+### **Join Team Marketplace**
 
-Coverage Improvement
+Shows all teams, sorted by compatibility.
 
-Actions
+**Filters:**
+- Problem Statement
+- Domain
+- Team Size
+- Required Skills
 
-Invite
+**Card:**
+- Team Name
+- Problem Statement
+- Coverage Score
+- Missing Skills
+- Current Members
+- Compatibility %
 
-AI Reason
+**AI Explanation:** e.g., "Joining this team increases team coverage from 68% to 92%."
 
-“This participant fills backend gap.”
+**Actions:** Request Join
 
-⸻
+**Join Team Edge Cases:**
+- *Team Full:* Join Disabled
+- *Existing Team Member:* Cannot join another team
+- *Pending Join Request Exists:* Block duplicate request
 
-Join Team Marketplace
+---
 
-Shows all teams.
+### **AI Team Recommendations**
 
-Sorted by compatibility.
+**Show Recommended Teams & Reason Examples:**
+- Team lacks Backend
+- Team lacks AI Engineer
+- Team lacks Designer
 
-Card
+**Display:** Coverage Improvement %
 
-Team Name
+---
 
-Problem Statement
+### **Auto Team Formation**
 
-Coverage Score
+**Trigger:** X time Before Event, For Users Without Teams
 
-Missing Skills
+**System:**
+- Groups Participants
+- Maximizes Skill Coverage
+- Balances Team Sizes
 
-Current Members
+**Auto Formation Edge Cases:**
+- *Not enough participants:* Create smaller teams, Notify organizer
 
-Compatibility %
+---
 
-AI Explanation
+### **Hackathon Active State**
 
-“Joining this team increases team coverage from 68% to 92%.”
+**After Event Starts (Lock):**
+- Team Changes
+- Invitations
+- Problem Statement Selection
 
-Actions
+---
 
-Request Join
+### **Team Workspace**
 
-⸻
+**Sections:**
+- Members
+- Invitations
+- Coverage Radar
+- Chat
+- Tasks
+- Submission Status
+- Problem Statement
 
-Team Workspace
+---
 
-Members
+### **Submission**
 
-Invitations
+**Fields:**
+- Project Name
+- Description
+- GitHub Repository
+- Demo Link
+- PPT Upload
+- Tech Stack
+- Video
 
-Coverage Radar
+**Actions:** Save Draft, Submit
 
-Chat
+**Submission Edge Cases:**
+- *Deadline Missed:* Mark Late Submission, Organizer decides acceptance
 
-Tasks
+---
 
-Submission Status
+### **Results Page**
 
-Problem Statement
+**Display:**
+- Rank
+- Final Score
+- Confidence Score
+- Reviewer Comments
+- AI Feedback
+- Leaderboard
 
-⸻
+---
 
-Submission
+## **3. REVIEWER PORTAL**
 
-Project Name
+### **Reviewer Authentication**
+Landing Page → Login / Signup → Select Role: Reviewer → Reviewer Dashboard
 
-Description
+---
 
-GitHub
+### **Reviewer Dashboard**
 
-Demo
+**Cards:**
+- Assigned Hackathons
+- Assigned Teams (Pending Evaluations)
+- Completed Reviews (Completed Evaluations)
+- Consistency Score
 
-PPT
+---
 
-Video
+### **Profile Setup**
 
-Save Draft
+**Fields:**
+- Name
+- Expertise Domains
+- Experience
+- Organization
+- Availability
 
-Submit
+**Conflict Declarations (Examples):**
+- College Affiliation
+- Previous Mentorship
+- Known Teams
 
-⸻
+**Action:** Save Profile
 
-Results
+---
 
-Rank
+### **Assigned Hackathons**
 
-Final Score
+**Card:**
+- Hackathon Name
+- Teams Assigned
+- Pending Reviews
+- Evaluation Progress
 
-Confidence Score
+---
 
-Reviewer Comments
+### **Team Queue (Evaluation List)**
 
-AI Feedback
+**Table:**
+- Team Name
+- Problem Statement
+- Submission Status
+- Expertise Match %
+- Priority
 
-Leaderboard
+**Action:** Evaluate
 
-⸻
+---
 
-REVIEWER PORTAL
+### **Evaluation Screen**
 
-Reviewer Dashboard
+**Show Team Details:**
+- Submission
+- GitHub Repository
+- Demo Link
+- PPT
+- Problem Statement
 
-Cards
+**Rubric:**
+- Innovation
+- Technical Depth
+- Scalability
+- Impact
+- Presentation
 
-Assigned Hackathons
+**Scores:** Score Range (0-10)
 
-Assigned Teams
+**Comments:** Feedback Box (Optional)
 
-Pending Reviews
+**Action:** Submit Evaluation
 
-Completed Reviews
+**Reviewer Edge Cases:**
+- *Reviewer attempts scoring outside range:* Block Submission
+- *Missing mandatory rubric score:* Block Submission
 
-Consistency Score
+**Reviewer Assignment Edge Cases:**
+- *Reviewer Declines Assignment:* System finds replacement reviewer
+- *Conflict Detected Later:* Assignment removed, Recomputed automatically
+- *Reviewer No Show:* System triggers reassignment, Organizer notified
 
-⸻
+---
 
-Profile Setup
+### **After Evaluation (History & Insights)**
 
-Domains
+**Evaluation History (Reviewer Can View):**
+- Previous Reviews (Submitted Scores)
+- Average Scores (Evaluation History)
+- Consistency Score
+- Reliability Score
 
-Experience
+**Reviewer Insights (Visible Only To Reviewer):**
+- Average Score
+- Peer Average
+- Consistency Trend
+- Completion Rate
 
-Organization
+**Bias Monitoring:**
+- *Visible To Reviewer:* Personal Consistency Score, Average Score Compared To Peers
+- *Visible To Organizer Only:* Bias Alerts, Outlier Detection, Statistical Analysis
 
-Availability
+---
 
-Conflict Declarations
+### **Results Published**
 
-⸻
+**Reviewer Can View:**
+- Winning Teams
+- Final Rankings
+- Reviewer Statistics
 
-Assigned Hackathons
+---
 
-Card
+## **GLOBAL STATE TRANSITIONS**
 
-Hackathon
-
-Teams Assigned
-
-Pending Reviews
-
-Progress
-
-⸻
-
-Team Queue
-
-Table
-
-Team
-
-Problem Statement
-
-Submission Status
-
-Expertise Match %
-
-Priority
-
-Action
-
-Evaluate
-
-⸻
-
-Evaluation Page
-
-Submission
-
-GitHub
-
-Demo
-
-PPT
-
-Problem Statement
-
-Rubric
-
-Innovation
-
-Technical Depth
-
-Scalability
-
-Impact
-
-Presentation
-
-Scores
-
-Comments
-
-Submit
-
-⸻
-
-Evaluation History
-
-Previous Reviews
-
-Average Scores
-
-Consistency Score
-
-Reliability Score
-
-⸻
-
-Reviewer Insights
-
-Visible Only To Reviewer
-
-Average Score
-
-Peer Average
-
-Consistency Trend
-
-Completion Rate
-
-⸻
-
-GLOBAL STATE TRANSITIONS
-
-Participant
-
+### **Participant**
+```text
 DISCOVER
 → REGISTER
 → VALIDATION
@@ -696,17 +710,19 @@ DISCOVER
 → SUBMISSION
 → EVALUATION
 → RESULTS
+```
 
-Reviewer
-
+### **Reviewer**
+```text
 INVITED
 → ACCEPTED
 → ASSIGNED
 → REVIEWING
 → COMPLETED
+```
 
-Organizer
-
+### **Organizer**
+```text
 CREATE
 → PUBLISH
 → REGISTRATION
@@ -715,6 +731,4 @@ CREATE
 → REVIEW
 → RESULTS
 → CLOSED
-
-⸻
-
+```
