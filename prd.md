@@ -463,19 +463,19 @@ The core system uses a hybrid approach:
 
 ### 9.1 Architecture Overview
 
-The registration pipeline is a multi-stage async processor. The synchronous API handler validates input, persists the raw registration, and enqueues a Celery task. The client subscribes to a WebSocket channel keyed by job_id to receive real-time stage updates.
+The registration pipeline is a multi-stage async processor. The synchronous API handler validates input, persists the raw registration, and enqueues a Celery task. The client subscribes to a WebSocket channel keyed by job_id to receive real-time stage updates. We follow hard invariants first (like username, contact info, email), then fuzzy searches, and finally device fingerprinting.
 
 #### 9.2 Duplicate Detection Pipeline
 
-#### Stage 1: Exact Matching (< 10ms)
+#### Stage 1: Hard Invariants & Exact Matching (< 10ms)
 
 - Email exact match → immediate flag as duplicate; no further processing
 
-- Phone hash match → immediate flag
+- Contact info (Phone hash) match → immediate flag
 
-- GitHub username exact match → high duplicate signal added
+- GitHub username exact match → immediate flag
 
-#### Stage 2: Fuzzy Name + College Matching (< 50ms)
+#### Stage 2: Fuzzy Name + Institution Matching (< 50ms)
 
 ```text
 name_sim = RapidFuzz.token_sort_ratio(name_a.lower(), name_b.lower()) / 100
@@ -483,18 +483,12 @@ college_sim = RapidFuzz.token_sort_ratio(normalize_college(c_a), normalize_colle
 # College normalization: lowercase, expand abbreviations (IIT->indian institute of technology)
 ```
 
-#### Stage 3: Semantic Embedding Similarity (< 2s)
+#### Stage 3: Device Fingerprinting
 
 ```text
-model = SentenceTransformer('all-MiniLM-L6-v2')  # 384-dim
-resume_emb   = model.encode(gemini_parsed_resume_text)  # Gemini extracts clean text from PDF
-skills_emb   = model.encode(participant.skills_text)
-github_emb   = model.encode(fetch_github_summary(participant.github_url))
-# github_summary: top repos, languages, pinned description — GitHub REST API
-
-resume_sim  = cosine_similarity(resume_emb_a,  resume_emb_b)
-skills_sim  = cosine_similarity(skills_emb_a,  skills_emb_b)
-github_sim  = cosine_similarity(github_emb_a,  github_emb_b)
+# Device/IP correlation checks
+device_match = check_fingerprint_correlation(device_fp_a, device_fp_b)
+ip_match = check_ip_subnet_velocity(ip_address_a, ip_address_b)
 ```
 
 #### Stage 4: FaceScan Personhood Validation (Optional, < 3s if consented)
@@ -522,12 +516,12 @@ else:
 #### Stage 5: Weighted Score Computation
 
 ```text
-W = {'resume':0.35, 'skills':0.25, 'github':0.20, 'name':0.12, 'college':0.08}
+W = {'name': 0.60, 'college': 0.40}
 score = sum(W[k]*sim[k] for k in W)
 
 # Device/IP bonus signals (additive):
-if device_fingerprint matches: score += 0.15
-if ip_matches_within_24h:     score += 0.10
+if device_match: score += 0.30
+if ip_match:     score += 0.20
 score = min(score, 1.0)  # cap at 1.0
 
 # FaceScan is intentionally not included in this score.
@@ -537,10 +531,10 @@ score = min(score, 1.0)  # cap at 1.0
 
 |Score Range|Decision|Action|
 |---|---|---|
-|0.00 – 0.69|ACCEPT|Auto-approve; store embeddings; send confirmation|
+|0.00 – 0.69|ACCEPT|Auto-approve; trigger embeddings generation; send confirmation|
 |0.70 – 0.84|MANUAL REVIEW|Flag with similarity explanation; admin must review within 24h|
 |0.85+|POTENTIAL DUPLICATE|Block registration; show which existing registration matched and why|
-|Any: exact email/phone match|HARD DUPLICATE|Immediate block; no further processing|
+|Any: exact email/phone/username match|HARD DUPLICATE|Immediate block; no further processing|
 
 #### 9.3 Similarity Explanation
 
@@ -560,423 +554,2040 @@ When a registration is flagged, the admin dashboard shows a breakdown card: simi
 
 > CRITICAL: FaceScan requires explicit opt-in consent with clear purpose explanation at registration time. Implement a "Delete My FaceScan Data" action in participant settings. If consent is declined, use manual organizer review instead of blocking registration.
 
-## 10. Team Formation Architecture
+## 10. Intelligent Team Formation & Participant Intelligence Architecture
 
-### 10.1 Skill Vector Generation
+### 10.1 Participant Intelligence Pipeline
 
-Each approved participant is processed by Gemini to extract a 10-dimension normalized skill vector. This vector is used for team formation, reviewer matching, and unified embedding generation.
+The platform transforms unstructured participant data into structured representations that can be reused across team formation, reviewer matching, duplicate detection, recommendation systems, and analytics.
+
+Rather than performing repeated AI inference for every downstream feature, HackOS generates a unified participant profile during registration.
+
+#### Processing Pipeline
 
 ```text
-GEMINI_PROMPT = '''
-You are a technical skills classifier. Given a participant's resume and skills description,
-output ONLY a valid JSON object with these exact keys. Values must be floats 0.0-1.0.
-Keys: backend, frontend, ai_ml, design, cloud, security, mobile, data_engineering, devops, product
-Base values on demonstrated experience, not aspirations. Cap at 0.9 unless expert-level evidence.
-Output only JSON, no markdown, no explanation.
-INPUT: {resume_text}
-SKILLS: {skills_description}
-'''
+Resume Upload
+      │
+      ▼
+Document Parser (PyMuPDF / Unstructured)
+      │
+      ▼
+Structured Information Extraction (Gemini 2.5 Flash)
+      │
+      ▼
+Participant Feature Generation
+      ├── Skill Vector
+      ├── Expertise Tags
+      ├── Seniority Score
+      ├── Domain Classification
+      └── Unified Embedding
+      │
+      ▼
+Participant Feature Store (PostgreSQL + pgvector)
 ```
 
-Post-processing: normalize so max(vector) = 1.0; clip all values to [0.0, 1.0]. Store as float[] in PostgreSQL skill_vectors table.
+#### Structured Extraction
 
-### 10.2 Coverage Scoring Model
+Gemini is used only once during profile creation to transform resumes into structured metadata.
 
-The admin defines a required coverage specification per problem statement: the minimum skill level needed for the team to be considered well-formed.
+**Example extracted schema:**
 
-```text
-required_coverage = {
-  'ai_ml': 0.70, 'backend': 0.60, 'frontend': 0.50, 'cloud': 0.40, 'design': 0.40
+```json
+{
+  "skills": ["Python", "FastAPI", "Docker", "PyTorch"],
+  "domains": ["AI", "Backend Systems"],
+  "experience_level": "Intermediate",
+  "projects": ["..."],
+  "leadership_experience": true,
+  "hackathon_experience": 4
 }
-
-def team_vector(members):
-    return {skill: max(m.skills[skill] for m in members) for skill in all_skills}
-
-def coverage_score(members, required):
-    tv = team_vector(members)
-    total_weight = sum(required.values())
-    score = sum(min(tv[s], req) / req * req for s, req in required.items())
-    return score / total_weight  # 0.0 to 1.0
 ```
 
-### 10.3 Algorithm Selection Analysis
+This structured representation becomes the source of truth for all downstream intelligence services.
 
-|Algorithm|Time Complexity|Optimal?|Recommendation|
-|---|---|---|---|
-|Greedy (skill gap fill)|O(n * k * m)|No (local optima)|Good for n>500; fast; use as fallback|
-|Bipartite Matching|O(V * E)|Yes for 1-to-1|Suitable for simple skill requirements|
-|Hungarian Algorithm|O(n^3)|Yes for assignment|RECOMMENDED for n<200; scipy.optimize.linear_sum_assignment|
-|ILP / Constraint Optimization|NP-hard (practical: minutes)|Yes for complex constraints|Overkill for hackathon scale; adds dependency weight|
+---
 
-> NOTE: Use modified greedy for initial team formation (fast, explainable). Run Hungarian algorithm optimization as a secondary pass for final team quality improvement. ILP is overengineered for this use case.
+### 10.2 Multi-Dimensional Skill Vector Generation
 
-### 10.4 Formation Algorithm (3-Hour Auto-Formation)
+Each participant is represented as a normalized 10-dimensional skill vector.
 
-1. Query all approved, teamless participants for the hackathon
+```json
+[
+    "backend",
+    "frontend",
+    "ai_ml",
+    "design",
+    "cloud",
+    "security",
+    "mobile",
+    "data_engineering",
+    "devops",
+    "product"
+]
+```
 
-1. Group by preferred problem statement
+#### Scoring Methodology
 
-1. For each PS with incomplete teams: compute coverage gap = required_coverage - current_team_vector
+Skill scores are generated from:
 
-1. Score each unassigned participant by: gap_fill_score = dot(gap, participant.skill_vector) / norm(gap)
+- Resume content
+- Project history
+- Technology usage frequency
+- GitHub metadata
+- Certifications
+- Self-declared skills
 
-1. Assign participant with highest gap_fill_score to team; recalculate coverage; repeat
+Scores are normalized to `0.0 <= skill_score <= 1.0`.
 
-1. If team complete (coverage >= 0.85) or max_size reached: finalize team
+**Example:**
 
-1. Remaining unassigned participants: form balanced teams by minimizing skill vector variance
+```json
+{
+  "backend": 0.92,
+  "frontend": 0.34,
+  "ai_ml": 0.88,
+  "cloud": 0.61,
+  "design": 0.12
+}
+```
 
-1. Generate diversity_score = entropy(skill_distribution_in_team) for each team
+**Storage:**
 
-1. Notify all participants of team assignment via WebSocket + email
+```sql
+participant_skill_vectors(
+    user_id,
+    hackathon_id,
+    vector float[10]
+)
+```
 
-### 10.5 Unified Participant Embedding
+The skill vector serves as the primary representation for team balancing and coverage optimization.
 
-A single 384-dim embedding is generated per participant for reuse across team formation, duplicate detection, and reviewer matching. This avoids redundant computation.
+---
+
+### 10.3 Unified Participant Embeddings
+
+To eliminate redundant computation across multiple AI modules, HackOS generates a single semantic embedding per participant.
+
+**Embedding Input:**
 
 ```text
-unified_emb = model.encode(
-  f'{resume_text} [SEP] {skills_text} [SEP] {github_summary} [SEP] {interests} [SEP] {preferred_ps}'
-)
-# Stored in pgvector table: participant_embeddings(user_id, hackathon_id, embedding vector(384))
+Resume Summary + Skills + Projects + GitHub Profile Summary + Interests + Preferred Problem Statements
 ```
+
+**Example:**
+
+```python
+embedding_input = f"""
+{resume_summary}
+{skills}
+{projects}
+{github_summary}
+{interests}
+{preferred_problem_statement}
+"""
+```
+
+**Embedding Model:**
+
+`BGE-Large` / `Gemini Embeddings`
+
+**Output:**
+
+`vector(768)`
+
+**Storage:**
+
+```sql
+participant_embeddings(
+    user_id,
+    hackathon_id,
+    embedding vector(768)
+)
+```
+
+The same embedding powers:
+
+- Team Formation
+- Reviewer Matching
+- Duplicate Detection
+- Team Recommendations
+- Participant Search
+- Analytics
+
+This reduces storage overhead and avoids repeated inference costs.
+
+---
+
+### 10.4 Problem Statement Coverage Model
+
+Each problem statement defines the minimum skill coverage required for a successful team.
+
+**Example:**
+
+```json
+{
+    "ai_ml": 0.70,
+    "backend": 0.60,
+    "frontend": 0.50,
+    "cloud": 0.40,
+    "design": 0.40
+}
+```
+
+#### Team Skill Representation
+
+For a team:
+
+```text
+team_vector(skill) = max(member.skill[skill])
+```
+
+The strongest contributor satisfies the corresponding skill requirement.
+
+#### Coverage Score
+
+```text
+coverage_score = Σ(min(team_skill, required_skill)) / Σ(required_skill)
+```
+
+**Output:** `0.0 → 1.0`
+
+**Interpretation:**
+
+| Coverage Score | Meaning |
+|---|---|
+| < 0.60 | Poorly Balanced |
+| 0.60–0.80 | Functional |
+| 0.80–0.90 | Strong |
+| > 0.90 | Highly Balanced |
+
+Teams reaching 0.85+ coverage are considered formation-ready.
+
+---
+
+### 10.5 Scalable Team Formation Engine
+
+#### Challenge
+
+A naive matching approach becomes computationally infeasible beyond a few thousand participants.
+For 100,000 participants: `100,000² = 10 Billion Comparisons`.
+
+HackOS therefore uses a distributed bucketed formation strategy.
+
+#### Stage 1: Participant Partitioning
+
+Participants are grouped into formation pools based on:
+
+- Preferred Problem Statement
+- Experience Level
+- Time Zone
+- Availability Window
+
+**Example:**
+
+```text
+AI Healthcare
+ ├─ Beginner
+ ├─ Intermediate
+ └─ Advanced
+```
+
+This reduces search space dramatically and enables parallel processing.
+
+#### Stage 2: Coverage-Driven Team Assembly
+
+For each incomplete team:
+
+```text
+coverage_gap = required_coverage - current_team_vector
+```
+
+Each candidate receives:
+
+```text
+gap_fill_score = dot(participant_skill_vector, coverage_gap)
+```
+
+Highest-scoring participants are selected first.
+
+**Benefits:**
+
+- Explainable
+- Deterministic
+- Fast
+- Scales linearly
+
+**Complexity:** `O(n)` per assignment cycle.
+
+#### Stage 3: Diversity Optimization
+
+After skill coverage is satisfied, diversity objectives are optimized.
+Dimensions include:
+
+- Skill Diversity
+- College Diversity
+- Geographic Diversity
+- Experience Diversity
+
+**Diversity score:**
+
+```text
+diversity_score = entropy(team_distribution)
+```
+
+Higher entropy indicates better-balanced teams.
+
+#### Stage 4: Local Optimization Pass
+
+Following initial formation: `Team A ↔ Team B` member swaps are evaluated.
+
+Swap accepted if: `coverage ↑ AND diversity ↑`
+
+This improves overall formation quality without expensive global optimization algorithms.
+
+---
+
+### 10.6 Team Formation Engine
+
+HackOS uses a multi-stage coverage-driven team formation engine designed to balance technical competency, diversity, and scalability.
+The system is optimized for large-scale hackathons and can operate efficiently across thousands of participants while maintaining explainable team assignment decisions.
+
+#### Formation Workflow
+
+**Stage 1: Participant Pool Generation**
+
+Approved participants are grouped into formation pools based on:
+
+- Preferred Problem Statement
+- Experience Level
+- Availability Window
+- Team Size Preferences
+
+This reduces the search space and enables parallel processing of independent participant groups.
+
+**Stage 2: Coverage Gap Analysis**
+
+Each problem statement defines a required skill coverage profile.
+
+**Example:**
+
+```json
+{
+    "ai_ml": 0.70,
+    "backend": 0.60,
+    "frontend": 0.50,
+    "cloud": 0.40,
+    "design": 0.40
+}
+```
+
+For every incomplete team, the system computes the current team coverage and identifies missing competencies.
+
+```text
+coverage_gap = required_coverage - current_team_vector
+```
+
+This gap represents the skills that should be prioritized in subsequent member assignments.
+
+**Stage 3: Candidate Scoring**
+
+Every unassigned participant within the formation pool is scored against the team’s current skill gap.
+
+```text
+gap_fill_score = dot(participant_skill_vector, coverage_gap)
+```
+
+A higher score indicates that the participant contributes more strongly toward satisfying the team’s missing requirements.
+The highest-scoring participant is assigned to the team. Coverage is recalculated after each assignment.
+
+This process repeats until:
+
+- Team coverage exceeds the target threshold
+- Maximum team size is reached
+- No suitable candidates remain
+
+**Stage 4: Diversity Optimization**
+
+Once technical coverage requirements are satisfied, the system evaluates team diversity.
+Dimensions include:
+
+- Skill Diversity
+- Experience Diversity
+- Institution Diversity
+- Geographic Diversity
+
+Diversity is measured using entropy-based scoring.
+
+```text
+diversity_score = entropy(team_distribution)
+```
+
+Where multiple candidate assignments achieve similar coverage scores, the assignment producing higher diversity is preferred.
+
+**Stage 5: Local Optimization Pass**
+
+After initial team formation, a refinement stage evaluates potential member swaps between teams.
+A swap is accepted only if it improves one or more of:
+
+- Coverage Score
+- Diversity Score
+- Team Balance
+
+while not degrading the remaining metrics.
+This optimization improves overall formation quality without requiring computationally expensive global optimization algorithms.
+
+---
+
+#### Team Validation Framework
+
+Every generated team is evaluated against objective quality metrics before finalization.
+
+**Coverage Validation**
+
+Measures how effectively required technical competencies are satisfied.
+
+```text
+coverage_score ∈ [0,1]
+Target: coverage_score ≥ 0.85
+```
+
+**Diversity Validation**
+
+Measures distribution across skills, experience levels, and participant backgrounds.
+Higher entropy indicates stronger diversity.
+
+**Balance Validation**
+
+Ensures that no team is disproportionately stronger or weaker than others.
+
+```text
+Metric: team_strength_variance
+Target: variance < predefined threshold
+```
+
+**Formation Confidence Score**
+
+Final team quality score:
+
+```text
+formation_confidence = 0.5 * coverage_score + 0.3 * diversity_score + 0.2 * balance_score
+Output: 0.0 – 1.0
+```
+
+**Interpretation:**
+
+| Score | Meaning |
+|---|---|
+| < 0.60 | Poor Team |
+| 0.60 – 0.80 | Acceptable Team |
+| 0.80 – 0.90 | Strong Team |
+| > 0.90 | Highly Optimized Team |
+
+Only teams exceeding the minimum confidence threshold are finalized automatically.
+
+---
+
+#### Scalability Characteristics
+
+The formation engine is designed for horizontal scaling.
+Key optimizations include:
+
+- Pool-based participant partitioning
+- Vectorized skill scoring
+- Parallel formation workers
+- Event-driven processing
+- Incremental coverage updates
+
+**Expected performance:**
+
+| Participants | Formation Time |
+|---|---|
+| 1,000 | < 10 sec |
+| 10,000 | < 1 min |
+| 100,000 | < 5 min |
+
+This enables HackOS to support university, enterprise, and global-scale hackathons without changes to the underlying formation logic.
+
+---
+
+### 10.7 Scalability Architecture
+
+The team formation subsystem is designed as an event-driven distributed service.
+
+```text
+Registration
+      │
+      ▼
+Kafka Event Bus
+      │
+      ▼
+Profile Processing Workers
+      │
+      ▼
+Participant Feature Store
+      │
+      ▼
+Formation Workers
+      │
+      ▼
+Optimization Workers
+      │
+      ▼
+Notification Service
+```
+
+#### Infrastructure Components
+
+| Component | Technology |
+|---|---|
+| Feature Store | PostgreSQL |
+| Vector Search | pgvector |
+| Cache | Redis |
+| Event Streaming | Kafka |
+| AI Processing | Gemini + Embedding Models |
+| Distributed Compute | Ray |
+| Realtime Updates | WebSockets |
+
+#### Target Scale
+
+| Metric | Capacity |
+|---|---|
+| Participants | 100,000+ |
+| Concurrent Registrations | 5,000/min |
+| Team Formation Runtime | <5 min |
+| Duplicate Detection Queries | <100 ms |
+| Reviewer Matching Runtime | <60 sec |
+| Embedding Similarity Search | <50 ms |
+
+The architecture scales horizontally by increasing worker nodes without modifying application logic, enabling HackOS to support large university, enterprise, and global hackathons.
+
 
 ## 11. Reviewer Intelligence Architecture
 
-### 11.1 Expertise Matching
+### 11.1 Reviewer Intelligence Pipeline
 
-Project descriptions and reviewer expertise profiles are embedded using SentenceTransformer (`all-MiniLM-L6-v2`). Cosine similarity forms the base expertise match score.
+HackOS transforms reviewer resumes, professional profiles, research interests, judging history, and declared expertise into structured reviewer representations used throughout the evaluation lifecycle.
 
-### 11.2 Multi-Objective Cost Matrix
+#### Processing Pipeline
 
-The Assignment Engine runs inside a Celery worker to avoid blocking API requests. A cost matrix is constructed:
 ```text
-cost[i][j] = 1 - match_score(reviewer_i, project_j)
+Reviewer Registration
+        │
+        ▼
+Profile Extraction Service
+        │
+        ▼
+Reviewer Intelligence Engine
+        │
+        ├── Expertise Extraction
+        ├── Domain Classification
+        ├── Capacity Estimation
+        ├── Availability Analysis
+        ├── Reliability Scoring
+        └── Conflict Detection
+        │
+        ▼
+Reviewer Feature Store
+```
 
-match_score = (
-  0.40 * expertise_sim(i, j)
-+ 0.30 * (1 - workload_penalty(i))   # penalty rises as assignments increase
-+ 0.20 * (1 - conflict_flag(i, j))   # 0 = conflict, 1 = no conflict
-+ 0.10 * diversity_bonus(i, j)         # reward assigning diverse domain pairs
+Each reviewer is represented as:
+
+```json
+{
+    "expertise_vector": ["..."],
+    "semantic_embedding": ["..."],
+    "capacity": 24,
+    "availability": "6 hours",
+    "reliability_score": 0.95,
+    "conflict_metadata": {}
+}
+```
+
+This representation enables intelligent assignment, workload balancing, conflict prevention, and dynamic reassignment.
+
+---
+
+### 11.2 Expertise Matching Engine
+
+Both project submissions and reviewer profiles are converted into semantic embeddings.
+
+#### Project Representation
+
+Generated from:
+
+- Problem Statement
+- Project Description
+- Tech Stack
+- Architecture Summary
+- Submitted Documentation
+
+#### Reviewer Representation
+
+Generated from:
+
+- Resume
+- Expertise Areas
+- Research Interests
+- Professional Experience
+- Previous Judging History
+
+The system computes semantic similarity between projects and reviewers.
+
+```text
+expertise_score = cosine_similarity(project_embedding, reviewer_embedding)
+```
+
+To improve scalability, HackOS does not compare every project against every reviewer.
+Instead, Approximate Nearest Neighbor (ANN) search retrieves the top candidate reviewers for each project.
+
+```text
+Project
+   │
+   ▼
+Top 50 Candidate Reviewers
+```
+
+This reduces computational complexity while preserving assignment quality.
+
+---
+
+### 11.3 Reviewer Capacity & Workload Modeling
+
+Every reviewer is assigned a dynamic review capacity.
+Capacity is estimated using:
+
+- Declared Availability
+- Historical Review Speed
+- Event Duration
+- Review Complexity
+
+**Example:**
+
+```text
+capacity = available_hours / estimated_review_time
+```
+
+A reviewer with:
+
+- **6 Available Hours**
+- **15 Minutes Per Review**
+
+can support approximately: **24 Reviews**
+
+The assignment engine never exceeds reviewer capacity limits.
+This prevents reviewer fatigue and improves evaluation quality.
+
+---
+
+### 11.4 Conflict Detection Framework
+
+Conflict detection acts as a hard constraint rather than a scoring penalty.
+Any reviewer-project pair violating conflict policies is automatically removed from consideration.
+
+#### Supported Conflict Rules
+
+**Institutional Conflict**
+
+Reviewers cannot evaluate projects from:
+- Their college
+- Their organization
+- Their startup
+- Their research lab
+
+**Declared Conflicts**
+
+Reviewers may explicitly declare:
+- Teams
+- Individuals
+- Organizations
+- Sponsors
+
+...they cannot evaluate.
+
+**Historical Collaboration Detection**
+
+Optional advanced checks include:
+- Shared GitHub repositories
+- Previous project collaboration
+- Mentor-team relationships
+
+If a conflict exists:
+
+```python
+assignment_allowed = False
+```
+
+The pair is excluded from optimization.
+This guarantees zero conflict-of-interest assignments.
+
+---
+
+### 11.5 Assignment Optimization Engine
+
+HackOS models reviewer assignment as a constrained optimization problem.
+Each project requires multiple independent reviewers.
+
+**Example:**
+
+```text
+Project A
+   ├── Reviewer 1
+   ├── Reviewer 2
+   └── Reviewer 3
+```
+
+#### Assignment Score
+
+For every valid reviewer-project pair:
+
+```text
+assignment_score = (
+    0.45 * expertise_score
+  + 0.25 * workload_balance_score
+  + 0.15 * availability_score
+  + 0.10 * diversity_score
+  + 0.05 * reliability_score
 )
 ```
 
-### 11.3 Conflict Detection Logic
+Where:
 
-To avoid false positive factories, we avoid IP /24 subnet checks. Instead we rely on:
-- **Institution Match:** Reviewers cannot review teams from the same college/company.
-- **Declared Conflicts:** Explicitly declared conflicts during reviewer onboarding.
-- **GitHub Co-authorship (stretch):** Identifying shared repo contributions.
+- **Expertise Score:** Measures reviewer-domain alignment.
+- **Workload Balance Score:** Rewards equitable assignment distribution.
+- **Availability Score:** Prioritizes reviewers with available judging windows.
+- **Diversity Score:** Encourages evaluation from reviewers with complementary backgrounds.
+- **Reliability Score:** Rewards reviewers with strong historical completion rates.
 
-### 11.4 Assignment Algorithm (Hungarian + Matrix Padding)
+#### Optimization Strategy
 
-We use `scipy.optimize.linear_sum_assignment` which provides an exact O(n³) solution. To handle cases where `n_slots != n_reviewers`, the cost matrix is dynamically padded.
-The algorithm guarantees the best global minimum cost (highest overall expertise + balance) compared to naive greedy assignments.
+The assignment engine uses a Min-Cost Flow optimization model implemented with Google OR-Tools.
+This enables:
 
-### 11.5 Dynamic Reassignment & Workload Verification
+- Multiple reviewers per project
+- Reviewer capacity constraints
+- Workload balancing
+- Hard conflict constraints
+- Dynamic reassignment support
 
-- Celery tasks verify workload distributions to ensure reviewers are within ±10% of the target allocation.
-- If a reviewer misses the T-6h warning, the admin receives an alert with an auto-reassign suggestion.
-- Reassignment triggers Redis Pub/Sub events that flow via WebSockets to the frontend.
+Unlike Hungarian-based approaches, Min-Cost Flow scales efficiently to large events while maintaining globally optimized assignments.
 
-## 12. Bias Detection Architecture
+---
 
-### 12.1 Statistical Rigor & Family-wise Error Control
+### 11.6 Assignment Validation Framework
 
-Running multiple bias tests simultaneously increases the chance of false positives. HackOS uses **Bonferroni corrections** (`α=0.0083` for 6 tests) to ensure alerts are statistically rigorous, preventing alert fatigue. The bias analysis runs entirely inside a Celery worker. Active alerts are deduplicated using Redis locks.
+Before assignments are finalized, the system validates overall assignment quality.
 
-### 12.2 Demographic & Outlier Bias Tests
+**Expertise Coverage Validation**
 
-|Bias Dimension|Statistical Test|Effect Size Metric|Trigger Threshold (Adjusted)|
-|---|---|---|---|
-|Reviewer Outlier|Z-score relative to global mean|Z-score|\|z\| > 2.0 (Warning) or > 3.0 (Alert)|
-|Gender bias|Mann-Whitney U test|Rank-Biserial r|p_adjusted < 0.0083|
-|Geographic bias|Kruskal-Wallis H test|Eta-squared|p_adjusted < 0.0083|
-|Institutional bias|Mann-Whitney U / Kruskal-Wallis|Rank-Biserial r / Eta-squared|p_adjusted < 0.0083|
-|Temporal drift|Spearman correlation (score vs sequence)|Spearman rho|\|rho\| > 0.4|
-|Criterion inconsistency|Coefficient of Variation (CV)|CV|CV > 0.5 for one reviewer|
+Each project must satisfy: At least 2 domain-relevant reviewers.
+- **Target:** Average Expertise Match > 0.85
 
-### 12.3 Inter-Rater Reliability (Krippendorff's Alpha)
+**Workload Distribution Validation**
 
-To compute final rankings confidence, HackOS calculates **Krippendorff's Alpha** across shared projects. This represents the level of agreement between reviewers.
-- 1.0 = Perfect agreement
-- 0.0 = Agreement expected by chance
-- <0.0 = Systematic disagreement
+Measures fairness of assignment allocation.
+- **Metric:** `workload_variance`
+- **Target:** ±10% reviewer workload deviation
 
-### 12.4 Score Normalization Pipeline
+**Conflict Validation**
 
-Raw scores are inherently noisy due to reviewer harshness/leniency.
-```text
-# Per-reviewer Z-score normalization
-normalized[r][p] = (raw[r][p] - mean(raw[r])) / std(raw[r])
+- **Target:** 0 conflict assignments
 
-# Global rescaling (bring back to original score range)
-final_normalized[r][p] = normalized[r][p] * global_std + global_mean
-```
+**Assignment Confidence Score**
 
-### 12.5 Audit Trail Integrity
-
-All bias alerts, review submissions, and administrative actions are logged to a PostgreSQL `audit_log` table.
-- A **SHA-256 hash chain** links each log entry sequentially.
-- **Concurrent Insert Protection:** `pg_advisory_xact_lock` guarantees chain integrity even under high concurrent load during the evaluation deadline rush.
-- **GDPR Anonymization:** Erasure requests nullify actor_ids while maintaining chain integrity to comply with data retention rules.
-
-## 13. Communication AI Architecture
-
-### 13.1 System Architecture
-
-The communication system combines a RAG-powered chatbot for synchronous Q&A, a Celery-based scheduler for proactive notifications, and a WebSocket layer for real-time delivery.
-
-#### RAG Pipeline
-
-1. Knowledge base ingestion: hackathon config + FAQ document + problem statement details are chunked (512 tokens, 50-token overlap), embedded, and stored in pgvector knowledge_base table
-
-1. User message arrives via WebSocket: embed query using same model
-
-1. pgvector cosine similarity search: retrieve top-5 most relevant chunks
-
-1. Inject user context: registration status, team membership, submission status
-
-1. Construct Gemini prompt: system_prompt + contexts + user_context + conversation_history (last 10 turns) + user_message
-
-1. Gemini streams response token-by-token → WebSocket sends chunks to client for real-time display
-
-1. Store full exchange in chat_messages table; update session context
-
-#### Proactive Notification Scheduler
+Final assignment quality metric:
 
 ```text
-# Celery beat schedule (runs every 15 minutes)
-@celery.task
-def check_deadline_reminders():
-    for hackathon in active_hackathons:
-        for deadline in [submission, evaluation, team_formation]:
-            delta = deadline - now()
-            if delta in [48h, 24h, 2h]:
-                users = get_users_without_completion(hackathon, deadline.type)
-                for user in users:
-                    send_personalized_reminder(user, deadline, hackathon)
+assignment_confidence = (
+    0.50 * expertise_quality
+  + 0.30 * workload_balance
+  + 0.20 * reliability_coverage
+)
 ```
 
-#### Personalization Logic
+**Output:** `0.0 – 1.0`
 
-- Reminder content varies by user journey stage: 'Your team hasn't submitted yet — you have 2 hours!' vs 'Great submission! Stay tuned for results.'
+Assignments below the minimum confidence threshold are automatically re-optimized.
 
-- Tone adapted based on previous engagement: frequent chatbot users get conversational tone; others get formal email
+---
 
-- Multilingual: Gemini translates reminder content to participant's detected preferred language (from chat history)
+### 11.7 Dynamic Reassignment & Failure Recovery
 
-### 13.2 Chatbot Fallback Strategy
+HackOS continuously monitors assignment health throughout the evaluation process.
 
-- If pgvector search returns max similarity < 0.60: mark response as low-confidence
+#### Reviewer No-Show Detection
 
-- Low-confidence responses include: 'I am not sure about this — I have flagged this question for your organizer'
+The platform tracks:
 
-- Organizer receives notification with unanswered question; can respond directly and optionally add to knowledge base
+- Login Activity
+- Assignment Acceptance
+- Review Submission Progress
+- Deadline Compliance
 
-## 14. Results Engine Design
+Reviewers failing to meet activity thresholds are flagged automatically.
 
-### 14.1 Results Computation Pipeline
+#### Automatic Reassignment
 
-1. Trigger: admin clicks 'Compute Results' or auto-trigger when all evaluations submitted
+If a reviewer becomes unavailable:
 
-1. Collect all evaluations for the hackathon; validate completeness
+```text
+Reviewer
+      ↓
+Projects Returned To Pool
+      ↓
+Optimization Engine
+      ↓
+Replacement Assignment
+```
 
-1. Per-reviewer Z-score normalization (see Section 12.3)
+Only incomplete reviews are reassigned. Completed reviews remain preserved.
 
-1. Weighted aggregation by criteria weights defined by admin
+#### Capacity Rebalancing
 
-1. Bootstrap confidence intervals (1000 resamples, 95% CI) per team
+When:
 
-1. Sort teams by final_score descending
+- Additional reviewers join
+- Projects increase
+- Reviewers withdraw
 
-1. Apply tie-breaking cascade if scores within CI overlap
+...the system automatically redistributes workload while preserving assignment quality.
 
-1. Trigger Gemini feedback generation for all teams (async batch)
+#### Real-Time Assignment Updates
 
-1. Trigger announcement content generation
+All assignment changes generate events through:
 
-1. Publish results: update hackathon status, notify all participants
+```text
+Redis Pub/Sub
+        │
+        ▼
+WebSocket Gateway
+        │
+        ▼
+Admin Dashboard
+```
 
-### 14.2 Tie-Breaking Cascade
+Organizers receive immediate visibility into:
 
-|Level|Criterion|Implementation|
+- Reviewer utilization
+- Assignment health
+- Reassignment events
+- Capacity bottlenecks
+- Evaluation progress
+
+---
+
+### 11.8 Scalability Characteristics
+
+The reviewer intelligence subsystem is designed for large-scale hackathons.
+
+| Metric | Target |
+|---|---|
+| Projects | 20,000+ |
+| Reviewers | 5,000+ |
+| Review Assignments | 60,000+ |
+| Expertise Search Latency | <50 ms |
+| Assignment Runtime | <60 sec |
+| Reassignment Runtime | <10 sec |
+| Conflict Detection Accuracy | >99% |
+
+The architecture scales horizontally by increasing assignment workers and ANN search nodes, enabling enterprise, university, and global-scale hackathons without changes to assignment logic.
+
+
+## 12. Bias Detection, Fairness & Auditability Architecture
+
+### 12.1 Fairness Intelligence Pipeline
+
+HackOS continuously monitors the evaluation process for statistical bias, reviewer anomalies, scoring inconsistencies, and ranking instability.
+Rather than performing periodic manual audits, fairness analysis operates as an asynchronous intelligence service throughout the judging lifecycle.
+
+#### Processing Pipeline
+
+```text
+Review Submission
+        │
+        ▼
+Kafka Event Stream
+        │
+        ▼
+Fairness Analytics Workers
+        │
+        ├── Reviewer Outlier Detection
+        ├── Demographic Bias Analysis
+        ├── Temporal Drift Detection
+        ├── Reliability Measurement
+        ├── Ranking Confidence Analysis
+        └── Fairness Intervention Engine
+        │
+        ▼
+Bias Dashboard & Audit System
+```
+
+Bias analysis executes asynchronously to prevent evaluation latency and scales independently from the core scoring infrastructure.
+
+---
+
+### 12.2 Statistical Rigor & Family-wise Error Control
+
+Running multiple statistical tests simultaneously increases the probability of false-positive alerts.
+To control Family-Wise Error Rate (FWER), HackOS applies Bonferroni correction across all active bias tests.
+
+```python
+alpha = 0.05
+num_tests = 6
+adjusted_alpha = alpha / num_tests
+# 0.0083
+```
+
+A bias alert is only generated when:
+
+```text
+p_value < adjusted_alpha
+```
+
+This prevents alert fatigue and ensures only statistically significant findings reach administrators.
+
+To avoid low-power statistical conclusions:
+
+**Minimum Sample Size Requirement:**
+- `n ≥ 20` observations per comparison group
+
+Tests failing minimum sample size requirements are labeled **Insufficient Statistical Power** rather than generating potentially misleading alerts.
+
+---
+
+### 12.3 Bias Detection Framework
+
+#### Reviewer Outlier Detection
+
+Identifies reviewers whose scoring behavior significantly differs from the overall judging population.
+
+| Metric | Method | Trigger |
 |---|---|---|
-|1|Primary evaluation criterion score|Compare raw score on highest-weight criterion|
-|2|Secondary evaluation criterion score|Compare raw score on second-highest-weight criterion|
-|3|Submission timestamp|Earlier submission wins (rewards preparedness)|
-|4|Admin manual override|Admin can set explicit rank override with logged justification|
+| Reviewer Outlier | Z-Score Analysis | `\|z\| > 2.0` (Warning), `\|z\| > 3.0` (Critical) |
 
-### 14.3 Personalized Feedback Generation
+#### Gender Bias Detection
 
-```text
-FEEDBACK_PROMPT = '''
-You are a supportive hackathon evaluator generating feedback for a student team.
-Team: {team_name} | Problem Statement: {ps_title}
-Scores by criterion: {score_breakdown}
-Reviewer comments: {aggregated_comments}
-Generate 3-4 paragraphs of encouraging, constructive feedback.
-Paragraph 1: Overall performance summary
-Paragraph 2: Strongest aspects with specific evidence
-Paragraph 3: Areas for improvement with actionable suggestions
-Paragraph 4: Encouragement and next steps
-Tone: professional but warm. Avoid generic phrases like 'good effort'.
-'''
-```
+Measures whether score distributions differ significantly across gender groups.
 
-### 14.4 Confidence Scoring
+| Metric | Statistical Test | Effect Size |
+|---|---|---|
+| Gender Bias | Mann-Whitney U Test | Rank-Biserial Correlation |
 
-Teams whose bootstrap CI upper bound exceeds the next team's lower bound are considered statistically distinct in ranking. Teams within CI overlap are flagged for admin review before announcement.
+**Alert condition:** `p_adjusted < 0.0083`
 
-```text
-final_score = mean(bootstrap_samples)
-ci_lower, ci_upper = np.percentile(bootstrap_samples, [2.5, 97.5])
-confidence = (ci_upper - ci_lower) / final_score  # lower = higher confidence
-```
+#### Geographic Bias Detection
 
-## 15. Database Schema
+Measures scoring differences across geographic regions.
 
-### 15.1 Core Tables
+| Metric | Statistical Test | Effect Size |
+|---|---|---|
+| Geographic Bias | Kruskal-Wallis H Test | Eta-Squared |
 
-#### users
+#### Institutional Bias Detection
 
-|Column|Type|Constraints|Description|
-|---|---|---|---|
-|id|UUID|PK, default gen_random_uuid()|Primary key|
-|email|VARCHAR(255)|UNIQUE, NOT NULL, AES-256 encrypted|Login identifier|
-|email_hash|CHAR(64)|UNIQUE, indexed|SHA-256 for lookups without decryption|
-|password_hash|VARCHAR(255)|NOT NULL, bcrypt rounds=12|Argon2id hash|
-|role|ENUM|NOT NULL, CHECK IN (admin,participant,reviewer)|RBAC role|
-|name_encrypted|TEXT|AES-256|Full name, encrypted|
-|phone_hash|CHAR(64)|UNIQUE, nullable|Phone SHA-256 for dedup|
-|is_active|BOOLEAN|DEFAULT true|Soft delete flag|
-|created_at|TIMESTAMPTZ|NOT NULL, DEFAULT now()|Creation timestamp|
-|updated_at|TIMESTAMPTZ|NOT NULL, DEFAULT now()|Last update|
-|gdpr_consent_at|TIMESTAMPTZ|nullable|Consent timestamp for GDPR|
-|data_deleted_at|TIMESTAMPTZ|nullable|Right-to-erasure timestamp|
+Measures score variation across institutions, universities, or organizations.
 
-#### hackathons
+| Metric | Statistical Test | Effect Size |
+|---|---|---|
+| Institutional Bias | Mann-Whitney U / Kruskal-Wallis | Rank-Biserial / Eta-Squared |
 
-|Column|Type|Constraints|Description|
-|---|---|---|---|
-|id|UUID|PK|Primary key|
-|admin_id|UUID|FK users.id|Organizer|
-|name|VARCHAR(255)|NOT NULL|Hackathon title|
-|theme|TEXT|NOT NULL|Theme description|
-|start_date|TIMESTAMPTZ|NOT NULL|Event start|
-|end_date|TIMESTAMPTZ|NOT NULL|Event end|
-|submission_deadline|TIMESTAMPTZ|NOT NULL|Idea submission cutoff|
-|min_team_size|SMALLINT|NOT NULL, DEFAULT 1|Minimum team members|
-|max_team_size|SMALLINT|NOT NULL, DEFAULT 5|Maximum team members|
-|status|ENUM|NOT NULL, DEFAULT draft|draft/published/active/evaluation/closed|
-|created_at|TIMESTAMPTZ|NOT NULL, DEFAULT now()|Creation timestamp|
+#### Temporal Drift Detection
 
-#### registrations
+Detects reviewer fatigue and score drift over time.
 
-|Column|Type|Constraints|Description|
-|---|---|---|---|
-|id|UUID|PK|Primary key|
-|user_id|UUID|FK users.id|Registered user|
-|hackathon_id|UUID|FK hackathons.id|Target hackathon|
-|college|VARCHAR(255)|NOT NULL|Institution name|
-|github_url|VARCHAR(500)|nullable|GitHub profile URL|
-|skills_text|TEXT|NOT NULL|Free-text skill description|
-|resume_path|VARCHAR(500)|nullable|S3/local path (NOT sent to AI)|
-|face_scan_consent_at|TIMESTAMPTZ|nullable|Separate opt-in timestamp for FaceScan validation|
-|person_validation_status|ENUM|nullable|not_started/verified/review_required/manual_review/failed|
-|person_validation_score|FLOAT|nullable|0.0-1.0 liveness/personhood confidence|
-|face_capture_hash|CHAR(64)|nullable|Salted audit hash of transient capture event; not a reusable face embedding|
-|face_data_deleted_at|TIMESTAMPTZ|nullable|Timestamp proving raw FaceScan frames were deleted|
-|status|ENUM|NOT NULL, DEFAULT pending|pending/approved/flagged/review/rejected|
-|duplicate_risk_score|FLOAT|nullable|0.0-1.0 weighted similarity|
-|fraud_risk_score|FLOAT|nullable|0.0-1.0 fraud signal|
-|confidence_score|FLOAT|nullable|Pipeline confidence (data completeness)|
-|duplicate_match_id|UUID|nullable, FK registrations.id|Matched existing registration|
-|device_fingerprint|CHAR(64)|nullable|SHA-256 of browser fingerprint|
-|ip_address_hash|CHAR(64)|nullable|SHA-256 of IP (not stored raw)|
-|created_at|TIMESTAMPTZ|NOT NULL|Submission timestamp|
+**Example:**
+- Early Reviews → Average 88
+- Late Reviews → Average 72
 
-#### skill_vectors
+**Metric:** `spearman(score, review_sequence)`
+**Alert threshold:** `abs(rho) > 0.40`
 
-|Column|Type|Constraints|Description|
-|---|---|---|---|
-|id|UUID|PK|Primary key|
-|user_id|UUID|FK users.id, UNIQUE per hackathon|Participant|
-|hackathon_id|UUID|FK hackathons.id|Context hackathon|
-|backend|FLOAT|CHECK BETWEEN 0 AND 1|Backend development score|
-|frontend|FLOAT|CHECK BETWEEN 0 AND 1|Frontend development score|
-|ai_ml|FLOAT|CHECK BETWEEN 0 AND 1|AI/ML score|
-|design|FLOAT|CHECK BETWEEN 0 AND 1|UI/UX design score|
-|cloud|FLOAT|CHECK BETWEEN 0 AND 1|Cloud/infrastructure score|
-|security|FLOAT|CHECK BETWEEN 0 AND 1|Security score|
-|mobile|FLOAT|CHECK BETWEEN 0 AND 1|Mobile development score|
-|data_engineering|FLOAT|CHECK BETWEEN 0 AND 1|Data engineering score|
-|devops|FLOAT|CHECK BETWEEN 0 AND 1|DevOps score|
-|product|FLOAT|CHECK BETWEEN 0 AND 1|Product management score|
-|generated_by|VARCHAR(50)|DEFAULT gemini-1.5-flash|Model version|
-|updated_at|TIMESTAMPTZ|NOT NULL|Last updated|
+#### Criterion Inconsistency Detection
 
-#### participant_embeddings (pgvector)
+Measures scoring stability within a reviewer.
 
-|Column|Type|Constraints|Description|
-|---|---|---|---|
-|id|UUID|PK|Primary key|
-|user_id|UUID|FK users.id|Participant|
-|hackathon_id|UUID|FK hackathons.id|Context|
-|embedding|vector(384)|NOT NULL, indexed (ivfflat)|Unified participant embedding|
-|embedding_source|VARCHAR(100)|NOT NULL|all-MiniLM-L6-v2 or similar|
-|created_at|TIMESTAMPTZ|NOT NULL|Generation timestamp|
+**Metric:** Coefficient of Variation (CV)
+**Alert threshold:** `CV > 0.50`
 
-#### teams
+This identifies reviewers whose scoring patterns appear unstable or inconsistent.
 
-|Column|Type|Constraints|Description|
-|---|---|---|---|
-|id|UUID|PK|Primary key|
-|hackathon_id|UUID|FK hackathons.id|Parent hackathon|
-|problem_statement_id|UUID|FK problem_statements.id, nullable|Chosen PS|
-|name|VARCHAR(255)|NOT NULL|Team name|
-|status|ENUM|DEFAULT forming|forming/complete/submitted/evaluated|
-|coverage_score|FLOAT|nullable|0.0-1.0 skill coverage score|
-|diversity_score|FLOAT|nullable|0.0-1.0 entropy-based diversity|
-|formed_by|ENUM|DEFAULT participant|participant/auto_formation|
-|created_at|TIMESTAMPTZ|NOT NULL|Creation timestamp|
+---
 
-#### evaluations + evaluation_scores
+### 12.4 Inter-Rater Reliability & Ranking Confidence
 
-|Column|Type|Constraints|Description|
-|---|---|---|---|
-|evaluations.id|UUID|PK|Primary key|
-|evaluations.reviewer_assignment_id|UUID|FK reviewer_assignments.id|Assignment context|
-|evaluations.submission_id|UUID|FK idea_submissions.id|Project evaluated|
-|evaluations.total_raw_score|FLOAT|nullable|Sum before normalization|
-|evaluations.normalized_score|FLOAT|nullable|Z-normalized score|
-|evaluations.reliability_weight|FLOAT|nullable|Reviewer reliability score|
-|evaluations.feedback_text|TEXT|nullable|Reviewer comments|
-|evaluations.status|ENUM|DEFAULT in_progress|in_progress/submitted|
-|evaluation_scores.criteria_id|UUID|FK evaluation_criteria.id|Which criterion|
-|evaluation_scores.raw_score|FLOAT|NOT NULL, 0-10|Raw score given|
-|evaluation_scores.normalized_score|FLOAT|nullable|Z-normalized value|
+To assess judging consistency, HackOS calculates Krippendorff’s Alpha across overlapping reviewer assignments.
 
-#### audit_log (Insert-Only)
+| Alpha | Interpretation |
+|---|---|
+| > 0.80 | Strong Agreement |
+| 0.67 – 0.80 | Acceptable Agreement |
+| < 0.67 | Weak Agreement |
+| < 0.00 | Systematic Disagreement |
 
-|Column|Type|Constraints|Description|
-|---|---|---|---|
-|id|UUID|PK|Primary key|
-|sequence_num|BIGSERIAL|NOT NULL, UNIQUE, monotonic|Chain sequence position|
-|previous_hash|CHAR(64)|NOT NULL|SHA-256 of previous entry|
-|current_hash|CHAR(64)|NOT NULL, UNIQUE|SHA-256(prev_hash+payload)|
-|action|VARCHAR(100)|NOT NULL|e.g. REGISTRATION_APPROVED|
-|actor_id|UUID|NOT NULL|Who performed the action|
-|entity_type|VARCHAR(50)|NOT NULL|registration/team/review/bias_alert|
-|entity_id|UUID|NOT NULL|ID of affected record|
-|metadata|JSONB|NOT NULL|Action-specific data snapshot|
-|timestamp|TIMESTAMPTZ|NOT NULL, DEFAULT now()|Action timestamp|
+This metric quantifies how consistently reviewers evaluate projects.
+
+#### Ranking Confidence Score
+
+Winner selection includes a confidence metric derived from:
 
 ```text
--- PostgreSQL trigger to prevent modification:
-CREATE RULE audit_log_no_modify AS ON UPDATE TO audit_log DO INSTEAD NOTHING;
-CREATE RULE audit_log_no_delete AS ON DELETE TO audit_log DO INSTEAD NOTHING;
+ranking_confidence = 0.60 * inter_rater_agreement + 0.40 * review_coverage
 ```
+
+**Output:**
+- High Confidence
+- Medium Confidence
+- Low Confidence
+
+**Example:**
+- **1st Place Project**
+- Final Score: 92.4
+- Ranking Confidence: 94%
+
+This provides transparency into ranking reliability.
+
+---
+
+### 12.5 Score Normalization Pipeline
+
+Raw reviewer scores often contain harshness and leniency effects.
+To improve fairness, HackOS performs reviewer-level normalization before final ranking generation.
+
+**Standard Normalization:**
+```text
+normalized_score = (raw_score - reviewer_mean) / reviewer_std
+```
+
+**Global Rescaling:**
+```text
+final_score = normalized_score * global_std + global_mean
+```
+
+#### Robust Normalization Safeguard
+
+If `reviewer_std < epsilon`, the system switches to robust normalization using:
+- Median
+- Median Absolute Deviation (MAD)
+
+This prevents instability caused by reviewers who assign nearly identical scores.
+
+---
+
+### 12.6 Bias Mitigation & Intervention Engine
+
+Detection alone does not improve fairness.
+When statistically significant bias is identified, HackOS performs impact analysis to determine whether rankings or project outcomes are materially affected.
+
+Possible interventions include:
+
+- **Score Normalization:** Applied when reviewer harshness or leniency significantly skews outcomes.
+- **Secondary Reviewer Assignment:** Projects affected by potential bias may receive additional evaluations.
+- **Manual Audit Escalation:** High-severity bias alerts are routed to administrators for review.
+- **Reviewer Quality Monitoring:** Repeated bias incidents contribute to reviewer reliability scores and future assignment eligibility.
+
+#### Severity Classification
+
+| Severity | Action |
+|---|---|
+| Low | Monitor |
+| Medium | Administrator Notification |
+| High | Additional Review Required |
+| Critical | Manual Investigation & Ranking Recalculation |
+
+All interventions are fully auditable.
+
+---
+
+### 12.7 Fairness Validation Framework
+
+Before final results are published, HackOS validates fairness metrics across the entire event.
+
+#### Validation Checks
+
+| Metric | Target |
+|---|---|
+| Conflict Violations | 0 |
+| Significant Bias Events | Investigated |
+| Reviewer Agreement | Alpha > 0.67 |
+| Review Coverage | 100% |
+| Ranking Confidence | > 85% |
+
+Only validated result sets proceed to winner generation.
+
+---
+
+### 12.8 Audit Trail Integrity & Compliance
+
+Every critical evaluation event is stored in an immutable audit chain.
+Tracked events include:
+
+- Review Submission
+- Score Modification
+- Bias Alert Generation
+- Reviewer Reassignment
+- Administrative Overrides
+- Winner Selection
+- Ranking Publication
+
+#### Hash-Chained Audit Records
+
+Each audit record stores:
+
+```text
+current_hash = SHA256(previous_hash + event_payload + timestamp)
+```
+
+This creates a tamper-evident chain across all evaluation events.
+
+#### Concurrent Insert Protection
+
+To maintain chain integrity during peak submission periods:
+
+```sql
+pg_advisory_xact_lock()
+```
+
+is used to serialize audit-chain writes.
+
+#### GDPR Compliance
+
+User erasure requests anonymize personally identifiable information while preserving audit-chain integrity and statistical records.
+
+---
+
+### 12.9 Scalability Characteristics
+
+The fairness subsystem is designed for large-scale hackathons and enterprise deployments.
+
+| Metric | Target |
+|---|---|
+| Reviewers | 5,000+ |
+| Projects | 20,000+ |
+| Review Assignments | 60,000+ |
+| Bias Detection Latency | <30 sec |
+| Fairness Report Generation | <2 min |
+| Ranking Confidence Computation | <1 min |
+| Audit Event Throughput | 10,000+ events/min |
+
+The architecture scales horizontally through distributed analytics workers, allowing fairness analysis, bias detection, and audit generation to operate independently of the core evaluation workflow.
+
+
+I’ve rewritten both sections to match the level of the Team Formation, Reviewer Intelligence, and Bias Detection sections. The focus is on scalability, reliability, explainability, and production architecture rather than implementation details.
+
+## 13. Communication Intelligence Architecture
+
+### 13.1 Communication Intelligence Pipeline
+
+HackOS provides a unified communication layer that combines real-time conversational support, proactive participant engagement, deadline awareness, multilingual communication, and organizer escalation workflows.
+The communication subsystem operates continuously throughout the hackathon lifecycle and serves as the primary participant interaction channel.
+
+#### Architecture Overview
+
+```text
+Participant
+      │
+      ▼
+WebSocket Gateway
+      │
+      ▼
+Communication Orchestrator
+      │
+      ├── RAG Knowledge Service
+      ├── Personalization Engine
+      ├── Notification Scheduler
+      ├── Translation Service
+      ├── Escalation Manager
+      └── Analytics Engine
+      │
+      ▼
+Communication Data Store
+```
+
+All communication services are event-driven and operate independently of the core platform workflow.
+
+---
+
+### 13.2 Knowledge-Aware Conversational Assistant
+
+HackOS provides a Retrieval-Augmented Generation (RAG) assistant capable of answering participant, reviewer, and organizer questions using hackathon-specific context.
+
+#### Knowledge Sources
+
+The assistant continuously indexes:
+- Hackathon Configuration
+- Problem Statements
+- Rules & Guidelines
+- FAQs
+- Timeline & Deadlines
+- Team Formation Policies
+- Evaluation Criteria
+- Organizer Announcements
+
+#### Knowledge Processing Pipeline
+
+```text
+Knowledge Sources
+        │
+        ▼
+Chunking Service
+        │
+        ▼
+Embedding Generation
+        │
+        ▼
+pgvector Knowledge Store
+```
+
+Document chunks are stored as semantic embeddings for efficient retrieval.
+
+#### Query Processing Pipeline
+
+```text
+User Question
+        │
+        ▼
+Embedding Generation
+        │
+        ▼
+Semantic Retrieval
+        │
+        ▼
+Context Assembly
+        │
+        ▼
+Response Generation
+        │
+        ▼
+WebSocket Streaming
+```
+
+**For every query:**
+1. Generate query embedding
+2. Retrieve top relevant knowledge chunks
+3. Inject user-specific context
+4. Generate grounded response
+5. Stream response to the frontend
+
+**User context may include:**
+- Registration Status
+- Team Membership
+- Submission Status
+- Reviewer Assignment Status
+- Event Participation History
+
+This enables highly personalized responses without exposing private information.
+
+---
+
+### 13.3 Personalization Engine
+
+HackOS personalizes all participant communication using behavioral and contextual signals.
+
+#### Personalization Inputs
+
+- Registration Progress
+- Team Status
+- Submission Status
+- Previous Engagement
+- Chatbot Usage History
+- Notification Interaction History
+- Preferred Language
+- Time Zone
+
+#### Example Personalization
+
+**Participant A:**
+> You have not completed your submission.
+> 2 hours remain before the deadline.
+
+**Participant B:**
+> Your project has been successfully submitted.
+> Evaluation begins tomorrow at 9:00 AM.
+
+This increases relevance and reduces notification fatigue.
+
+---
+
+### 13.4 Proactive Notification Intelligence
+
+The notification subsystem continuously monitors participant progress and upcoming milestones.
+
+#### Event Categories
+
+- Registration Deadlines
+- Team Formation Deadlines
+- Submission Deadlines
+- Evaluation Schedules
+- Result Announcements
+- Reviewer Reminders
+- Administrative Updates
+
+#### Notification Pipeline
+
+```text
+Hackathon Events
+        │
+        ▼
+Event Detection Service
+        │
+        ▼
+Personalization Engine
+        │
+        ▼
+Notification Queue
+        │
+        ▼
+Delivery Services
+```
+
+Notifications may be delivered through:
+- Email
+- In-App Alerts
+- Push Notifications
+- WebSocket Events
+
+#### Adaptive Reminder Strategy
+
+Reminder timing dynamically adjusts based on participant behavior.
+
+| User Type | Reminder Frequency |
+|---|---|
+| Highly Engaged | Minimal |
+| Inactive | Increased |
+| At-Risk Submission | Aggressive |
+| Completed Tasks | Suppressed |
+
+This prevents over-communication while maximizing completion rates.
+
+---
+
+### 13.5 Multilingual Communication Layer
+
+HackOS automatically supports multilingual communication.
+Language preferences are inferred from:
+
+- Registration Data
+- User Settings
+- Conversation History
+
+Messages are translated before delivery. Supported communication types:
+
+- Chatbot Responses
+- Notifications
+- Announcements
+- Evaluation Feedback
+- Organizer Messages
+
+This improves accessibility for geographically distributed hackathons.
+
+---
+
+### 13.6 Confidence & Escalation Framework
+
+The assistant continuously evaluates response confidence.
+
+#### Confidence Evaluation
+
+Factors include:
+- Retrieval Similarity
+- Context Coverage
+- Historical Success Rate
+- Knowledge Freshness
+
+**Output:**
+- High Confidence
+- Medium Confidence
+- Low Confidence
+
+#### Organizer Escalation Workflow
+
+Low-confidence queries automatically trigger escalation.
+
+```text
+Participant Question
+        │
+        ▼
+Low Confidence Detection
+        │
+        ▼
+Organizer Queue
+        │
+        ▼
+Human Response
+        │
+        ▼
+Knowledge Base Update
+```
+
+This enables continuous knowledge base improvement while preventing hallucinated responses.
+
+---
+
+### 13.7 Communication Analytics
+
+The platform continuously measures communication effectiveness.
+
+#### Key Metrics
+
+| Metric | Description |
+|---|---|
+| Response Latency | Chatbot response time |
+| Resolution Rate | Questions answered successfully |
+| Escalation Rate | Human intervention frequency |
+| Notification Open Rate | User engagement |
+| Completion Conversion Rate | Actions completed after reminders |
+| Participant Satisfaction | Communication quality score |
+
+These metrics help organizers optimize future events.
+
+---
+
+### 13.8 Scalability Characteristics
+
+| Metric | Target |
+|---|---|
+| Concurrent Conversations | 10,000+ |
+| Notification Throughput | 100,000+/hour |
+| Knowledge Documents | 1M+ Chunks |
+| Query Response Time | <2 sec |
+| Escalation Detection | Real-Time |
+| Delivery Success Rate | >99% |
+
+The communication subsystem scales horizontally through independent retrieval, notification, and generation workers.
+
+---
+
+## 14. Results Intelligence & Ranking Architecture
+
+### 14.1 Results Processing Pipeline
+
+The Results Engine transforms raw evaluations into statistically robust rankings, confidence-aware winner selection, personalized feedback, and transparent audit records.
+
+#### Architecture Overview
+
+```text
+Review Submissions
+        │
+        ▼
+Validation Engine
+        │
+        ▼
+Normalization Engine
+        │
+        ▼
+Ranking Engine
+        │
+        ▼
+Confidence Analysis
+        │
+        ▼
+Feedback Generation
+        │
+        ▼
+Results Publication
+```
+
+All stages are asynchronous and independently scalable.
+
+---
+
+### 14.2 Evaluation Validation Layer
+
+Before ranking begins, HackOS validates evaluation integrity.
+
+**Validation Checks:**
+- Missing Reviews
+- Duplicate Reviews
+- Conflict Violations
+- Bias Investigation Status
+- Review Coverage Requirements
+
+Only validated datasets proceed to ranking.
+
+---
+
+### 14.3 Score Normalization Engine
+
+Reviewer scoring behavior varies significantly.
+To reduce harshness and leniency effects, HackOS applies reviewer-level normalization.
+
+#### Normalization Workflow
+
+```text
+Raw Scores
+      │
+      ▼
+Reviewer Normalization
+      │
+      ▼
+Global Rescaling
+      │
+      ▼
+Normalized Scores
+```
+
+**Benefits:**
+- Fairer Rankings
+- Reduced Reviewer Bias
+- Improved Cross-Reviewer Comparability
+
+---
+
+### 14.4 Ranking Computation Engine
+
+Final rankings are computed using weighted aggregation. Each hackathon defines custom evaluation criteria.
+
+**Example:**
+- Innovation: 40%
+- Technical Complexity: 30%
+- Impact: 20%
+- Presentation: 10%
+
+**Final score:**
+```text
+final_score = Σ(weight × normalized_criterion_score)
+```
+
+This enables flexible evaluation frameworks across different hackathons.
+
+---
+
+### 14.5 Statistical Confidence Analysis
+
+HackOS evaluates ranking stability using bootstrap resampling.
+
+#### Bootstrap Framework
+
+For each team:
+- 1000 Resamples
+- 95% Confidence Interval
+
+**Output:**
+- Mean Score
+- Confidence Interval
+- Ranking Stability
+
+**Example:**
+- **Team A**
+- Score: 91.4
+- 95% CI: 89.8 – 92.7
+
+This quantifies uncertainty rather than treating rankings as absolute.
+
+---
+
+### 14.6 Tie Resolution Framework
+
+When confidence intervals overlap significantly, rankings may not be statistically distinguishable.
+
+#### Tie Resolution Cascade
+
+| Level | Resolution Rule |
+|---|---|
+| 1 | Highest Primary Criterion Score |
+| 2 | Highest Secondary Criterion Score |
+| 3 | Earliest Valid Submission |
+| 4 | Administrator Review |
+
+All tie-break decisions are recorded in the audit system.
+
+---
+
+### 14.7 Ranking Confidence Engine
+
+Each ranking receives a confidence score.
+
+**Inputs:**
+- Review Coverage
+- Inter-Rater Agreement
+- Bootstrap Stability
+- Bias Investigation Status
+
+**Output:**
+- High Confidence
+- Medium Confidence
+- Low Confidence
+
+**Example:**
+- **Rank #1**
+- Final Score: 92.4
+- Confidence: 96%
+
+This provides transparency into winner selection.
+
+---
+
+### 14.8 Personalized Feedback Generation
+
+HackOS automatically generates detailed feedback for every team.
+
+**Inputs:**
+- Criterion Scores
+- Reviewer Comments
+- Comparative Performance
+- Project Metadata
+
+**Generated feedback includes:**
+- **Performance Summary:** Overall evaluation outcome.
+- **Key Strengths:** Evidence-based positive observations.
+- **Improvement Opportunities:** Actionable recommendations.
+- **Future Development Path:** Suggested next steps for project growth.
+
+Feedback generation runs asynchronously to prevent result publication delays.
+
+---
+
+### 14.9 Results Publication & Announcement Engine
+
+After validation and ranking completion:
+
+```text
+Ranking Finalized
+       │
+       ▼
+Announcement Generator
+       │
+       ▼
+Participant Notifications
+       │
+       ▼
+Public Leaderboard
+```
+
+Generated assets include:
+- Winner Announcements
+- Category Awards
+- Social Media Content
+- Organizer Reports
+- Participant Feedback Reports
+
+---
+
+### 14.10 Results Validation Framework
+
+Before publication:
+
+| Validation Check | Requirement |
+|---|---|
+| Evaluation Coverage | 100% |
+| Bias Investigation | Complete |
+| Ranking Confidence | Above Threshold |
+| Conflict Violations | 0 |
+| Audit Chain Integrity | Verified |
+
+Only validated result sets are eligible for publication.
+
+---
+
+### 14.11 Scalability Characteristics
+
+| Metric | Target |
+|---|---|
+| Projects Evaluated | 20,000+ |
+| Reviews Processed | 60,000+ |
+| Result Generation Time | <2 min |
+| Feedback Generation Throughput | 50,000+/hour |
+| Confidence Analysis Runtime | <1 min |
+| Ranking Computation Runtime | <30 sec |
+
+The results subsystem is designed to support university, enterprise, and global-scale hackathons while maintaining fairness, transparency, and statistical rigor.
+
+# 15. Data Architecture & Database Schema
+
+## 15.1 Database Architecture
+
+HackOS follows a polyglot persistence architecture optimized for transactional integrity, semantic search, real-time operations, analytics, and auditability.
+
+### Storage Layers
+
+```text
+PostgreSQL
+ ├── User Management
+ ├── Registrations
+ ├── Team Formation
+ ├── Reviewer Assignment
+ ├── Evaluations
+ ├── Results
+ └── Audit Logs
+
+pgvector
+ ├── Participant Embeddings
+ ├── Reviewer Embeddings
+ ├── Project Embeddings
+ └── Knowledge Base Embeddings
+
+Redis
+ ├── Session Store
+ ├── Real-Time State
+ ├── Pub/Sub Events
+ └── Distributed Locks
+```
+
+### Design Principles
+
+- Horizontally scalable
+- Event-driven architecture
+- Immutable audit trails
+- GDPR compliant
+- Vector-native search
+- Real-time analytics support
+- Optimized for 100,000+ participants
+
+---
+
+# 15.2 Identity & Access Management
+
+## users
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| email | VARCHAR(255) | UNIQUE, NOT NULL, Encrypted |
+| email_hash | CHAR(64) | UNIQUE, Indexed |
+| password_hash | TEXT | Argon2id |
+| role | ENUM | admin, participant, reviewer |
+| name_encrypted | TEXT | AES-256 |
+| phone_hash | CHAR(64) | Nullable |
+| is_active | BOOLEAN | Default TRUE |
+| gdpr_consent_at | TIMESTAMPTZ | Nullable |
+| data_deleted_at | TIMESTAMPTZ | Nullable |
+| created_at | TIMESTAMPTZ | Default now() |
+| updated_at | TIMESTAMPTZ | Default now() |
+
+## user_sessions
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| user_id | UUID | FK users.id |
+| refresh_token_hash | CHAR(64) | Indexed |
+| expires_at | TIMESTAMPTZ | NOT NULL |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+---
+
+# 15.3 Hackathon Management
+
+## hackathons
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| admin_id | UUID | FK users.id |
+| name | VARCHAR(255) | NOT NULL |
+| description | TEXT | NOT NULL |
+| start_date | TIMESTAMPTZ | NOT NULL |
+| end_date | TIMESTAMPTZ | NOT NULL |
+| registration_deadline | TIMESTAMPTZ | NOT NULL |
+| submission_deadline | TIMESTAMPTZ | NOT NULL |
+| status | ENUM | draft, active, evaluation, completed |
+| created_at | TIMESTAMPTZ | Default now() |
+
+## problem_statements
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| hackathon_id | UUID | FK hackathons.id |
+| title | VARCHAR(255) | NOT NULL |
+| description | TEXT | NOT NULL |
+| required_coverage | JSONB | Skill Coverage Configuration |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+---
+
+# 15.4 Participant Intelligence
+
+## registrations
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| user_id | UUID | FK users.id |
+| hackathon_id | UUID | FK hackathons.id |
+| college | VARCHAR(255) | NOT NULL |
+| github_url | TEXT | Nullable |
+| linkedin_url | TEXT | Nullable |
+| resume_path | TEXT | Nullable |
+| skills_text | TEXT | NOT NULL |
+| interests_text | TEXT | Nullable |
+| status | ENUM | pending, approved, flagged, rejected |
+| duplicate_risk_score | FLOAT | Nullable |
+| fraud_risk_score | FLOAT | Nullable |
+| confidence_score | FLOAT | Nullable |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+## participant_profiles
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| registration_id | UUID | FK registrations.id |
+| primary_role | VARCHAR(100) | NOT NULL |
+| secondary_role | VARCHAR(100) | Nullable |
+| expertise_tags | JSONB | NOT NULL |
+| domains | JSONB | NOT NULL |
+| experience_level | VARCHAR(50) | Nullable |
+| summary | TEXT | Nullable |
+| generated_at | TIMESTAMPTZ | NOT NULL |
+
+## participant_skill_vectors
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| user_id | UUID | FK users.id |
+| hackathon_id | UUID | FK hackathons.id |
+| skill_vector | FLOAT[] | Length = 10 |
+| generated_by | VARCHAR(100) | Model Version |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+## participant_embeddings
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| user_id | UUID | FK users.id |
+| hackathon_id | UUID | FK hackathons.id |
+| embedding | vector(768) | HNSW Indexed |
+| embedding_source | VARCHAR(100) | NOT NULL |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+---
+
+# 15.5 Team Formation
+
+## teams
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| hackathon_id | UUID | FK hackathons.id |
+| problem_statement_id | UUID | FK problem_statements.id |
+| name | VARCHAR(255) | NOT NULL |
+| status | ENUM | forming, active, submitted, evaluated |
+| coverage_score | FLOAT | Nullable |
+| diversity_score | FLOAT | Nullable |
+| formation_confidence | FLOAT | Nullable |
+| formed_by | ENUM | participant, auto_formation |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+## team_members
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| team_id | UUID | FK teams.id |
+| user_id | UUID | FK users.id |
+| role | VARCHAR(100) | Nullable |
+| joined_at | TIMESTAMPTZ | NOT NULL |
+
+**Composite Primary Key**
+
+```sql
+(team_id, user_id)
+```
+
+---
+
+# 15.6 Reviewer Intelligence
+
+## reviewer_profiles
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| user_id | UUID | FK users.id |
+| expertise_tags | JSONB | NOT NULL |
+| availability_hours | FLOAT | NOT NULL |
+| reliability_score | FLOAT | Nullable |
+| max_capacity | INTEGER | NOT NULL |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+## reviewer_embeddings
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| reviewer_id | UUID | FK reviewer_profiles.id |
+| embedding | vector(768) | HNSW Indexed |
+| embedding_source | VARCHAR(100) | NOT NULL |
+
+## reviewer_assignments
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| reviewer_id | UUID | FK reviewer_profiles.id |
+| submission_id | UUID | FK submissions.id |
+| assignment_score | FLOAT | NOT NULL |
+| status | ENUM | assigned, accepted, completed, reassigned |
+| assigned_at | TIMESTAMPTZ | NOT NULL |
+| completed_at | TIMESTAMPTZ | Nullable |
+
+---
+
+# 15.7 Project Intelligence
+
+## submissions
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| team_id | UUID | FK teams.id |
+| problem_statement_id | UUID | FK problem_statements.id |
+| title | VARCHAR(255) | NOT NULL |
+| description | TEXT | NOT NULL |
+| repository_url | TEXT | Nullable |
+| demo_url | TEXT | Nullable |
+| submitted_at | TIMESTAMPTZ | NOT NULL |
+
+## project_embeddings
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| submission_id | UUID | FK submissions.id |
+| embedding | vector(768) | HNSW Indexed |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+---
+
+# 15.8 Evaluation Engine
+
+## evaluation_criteria
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| hackathon_id | UUID | FK hackathons.id |
+| name | VARCHAR(255) | NOT NULL |
+| weight | FLOAT | NOT NULL |
+
+## evaluations
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| reviewer_assignment_id | UUID | FK reviewer_assignments.id |
+| submission_id | UUID | FK submissions.id |
+| total_raw_score | FLOAT | Nullable |
+| normalized_score | FLOAT | Nullable |
+| reliability_weight | FLOAT | Nullable |
+| status | ENUM | in_progress, submitted |
+| feedback_text | TEXT | Nullable |
+| submitted_at | TIMESTAMPTZ | Nullable |
+
+## evaluation_scores
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| evaluation_id | UUID | FK evaluations.id |
+| criteria_id | UUID | FK evaluation_criteria.id |
+| raw_score | FLOAT | NOT NULL |
+| normalized_score | FLOAT | Nullable |
+
+---
+
+# 15.9 Communication Intelligence
+
+## chat_sessions
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| user_id | UUID | FK users.id |
+| hackathon_id | UUID | FK hackathons.id |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+## chat_messages
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| session_id | UUID | FK chat_sessions.id |
+| role | ENUM | user, assistant |
+| content | TEXT | NOT NULL |
+| confidence_score | FLOAT | Nullable |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+## knowledge_base
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| hackathon_id | UUID | FK hackathons.id |
+| content | TEXT | NOT NULL |
+| embedding | vector(768) | HNSW Indexed |
+| source_type | VARCHAR(100) | NOT NULL |
+
+---
+
+# 15.10 Fairness & Analytics
+
+## bias_alerts
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| hackathon_id | UUID | FK hackathons.id |
+| alert_type | VARCHAR(100) | NOT NULL |
+| severity | ENUM | low, medium, high, critical |
+| affected_entity_id | UUID | Nullable |
+| statistical_evidence | JSONB | NOT NULL |
+| created_at | TIMESTAMPTZ | NOT NULL |
+
+## ranking_confidence
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| submission_id | UUID | FK submissions.id |
+| confidence_score | FLOAT | NOT NULL |
+| ci_lower | FLOAT | NOT NULL |
+| ci_upper | FLOAT | NOT NULL |
+
+---
+
+# 15.11 Immutable Audit Architecture
+
+## audit_log
+
+| Column | Type | Constraints |
+|----------|----------|----------|
+| id | UUID | PK |
+| sequence_num | BIGSERIAL | UNIQUE |
+| previous_hash | CHAR(64) | NOT NULL |
+| current_hash | CHAR(64) | UNIQUE |
+| action | VARCHAR(100) | NOT NULL |
+| actor_id | UUID | Nullable |
+| entity_type | VARCHAR(50) | NOT NULL |
+| entity_id | UUID | NOT NULL |
+| metadata | JSONB | NOT NULL |
+| timestamp | TIMESTAMPTZ | Default now() |
+
+### Audit Protection Rules
+
+```sql
+CREATE RULE audit_log_no_modify
+AS ON UPDATE TO audit_log
+DO INSTEAD NOTHING;
+
+CREATE RULE audit_log_no_delete
+AS ON DELETE TO audit_log
+DO INSTEAD NOTHING;
+```
+
+### Hash Chain Integrity
+
+```text
+current_hash =
+SHA256(
+    previous_hash +
+    payload +
+    timestamp
+)
+```
+
+Every registration, assignment, evaluation, bias intervention, ranking decision, and administrative action is permanently recorded in the audit chain.
 
 ## 16. Entity-Relationship Diagram Description
 
