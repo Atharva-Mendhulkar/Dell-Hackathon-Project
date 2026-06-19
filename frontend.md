@@ -153,6 +153,8 @@ Shows all hackathons.
 6. Evaluations
 7. Analytics
 8. Audit Trail
+9. Communications & Promotion
+10. Appeals
 
 ---
 
@@ -311,10 +313,43 @@ Clicking Analysis opens:
 - Bias Alerts
 - Skill Distribution
 - Team Distribution
+- Communication Effectiveness
+- Event ROI
 
 **Predictive Insights:**
 - Teams likely not to submit
 - Reviewer overload warnings
+- Outcome forecasting
+
+---
+
+### **Communications & Promotion Tab**
+
+**Communications:**
+- Automated Email Scheduling
+- Real-time Q&A Management
+- Engagement Tracking (Open/Click rates)
+
+**Promotion AI:**
+- Automated content generation (Twitter, LinkedIn, Emails)
+- Target Audience Selection
+- A/B Testing Configuration
+- Marketing Analytics
+
+---
+
+### **Appeals Tab**
+
+**Appeals Queue:**
+- Participant Name
+- Disputed Criterion
+- Appeal Reason
+- System Audit Log Snippet
+
+**Actions:**
+- Review Appeal
+- Adjust Score
+- Reject Appeal
 
 ---
 
@@ -399,6 +434,13 @@ Landing Page → Login / Signup → Select Role: Participant → Participant Das
 - Suggested Teams
 - Suggested Teammates
 
+### **RAG Chatbot Widget**
+
+**Features:**
+- Floating widget available on all Participant pages
+- Real-time Q&A about hackathon rules, schedule, and judging criteria
+- Context-aware responses based on Hackathon Config
+
 ---
 
 ### **Hackathon Workspace**
@@ -411,6 +453,7 @@ This becomes the participant’s main screen.
 3. Recruitment
 4. Submission
 5. Results
+6. Appeals
 
 ---
 
@@ -572,6 +615,20 @@ Shows all teams, sorted by compatibility.
 - Reviewer Comments
 - AI Feedback
 - Leaderboard
+
+---
+
+### **Appeals Screen**
+
+**Fields:**
+- Select Disputed Criterion
+- Appeal Reason / Explanation
+
+**Action:** Submit Appeal
+
+**Status:**
+- Pending Organizer Review
+- Approved / Rejected
 
 ---
 
