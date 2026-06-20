@@ -23,8 +23,3 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
-
-def init_missing_tables() -> None:
-    from .models.base import Base
-    from .models import Participant, Reviewer, Team, Registration, Assignment, IdeaSubmission, ProblemStatement, UserRole, Evaluation, Hackathon
-    Base.metadata.create_all(bind=engine)
