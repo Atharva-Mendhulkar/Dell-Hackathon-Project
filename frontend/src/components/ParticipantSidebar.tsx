@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { signOut } from "@/app/auth/actions";
+import { useOnboardingStore } from "@/store/useOnboardingStore";
 
 export default function ParticipantSidebar() {
   const pathname = usePathname();
+  const { fullName, collegeInfo, aiData } = useOnboardingStore();
 
   const navLinks = [
     { name: "Dashboard", href: "/participant/dashboard", icon: "dashboard" },
+    { name: "Profile", href: "/participant/profile", icon: "person" },
     { name: "Teams", href: "/participant/teams", icon: "groups" },
     { name: "Challenges", href: "/participant/challenges", icon: "emoji_events" },
   ];
@@ -56,13 +59,51 @@ export default function ParticipantSidebar() {
         </div>
         
         {/* User Profile */}
-        <div className="mt-4 flex items-center gap-3 px-2 py-3 bg-white/5 rounded-xl border border-white/10">
-          <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold">
-            JD
-          </div>
-          <div>
-            <p className="text-white text-sm font-bold">John Doe</p>
-            <p className="text-white/60 text-xs">Level 4</p>
+        <div className="relative">
+          <button 
+            onClick={() => {
+              const modal = document.getElementById('profile-modal');
+              if (modal) modal.classList.toggle('hidden');
+            }}
+            className="w-full mt-4 flex items-center gap-3 px-2 py-3 bg-white/5 hover:bg-white/10 transition-colors rounded-xl border border-white/10 text-left"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold shrink-0">
+              {fullName ? fullName.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() : "H"}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-white text-sm font-bold truncate">{fullName || "Hacker"}</p>
+              <p className="text-white/60 text-xs truncate">{collegeInfo?.college || "Participant"}</p>
+            </div>
+          </button>
+          
+          {/* Simple Profile Modal */}
+          <div id="profile-modal" className="hidden absolute bottom-full left-0 w-64 mb-2 bg-[#0a2e29] border border-white/10 rounded-2xl p-4 shadow-xl z-50">
+            <h4 className="text-white font-bold mb-3 border-b border-white/10 pb-2">Your Profile</h4>
+            
+            <div className="space-y-3">
+              <div>
+                <span className="text-white/50 text-[10px] uppercase tracking-wider font-bold">Top Skills</span>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {aiData?.skill_vector ? Object.entries(aiData.skill_vector)
+                    .sort((a, b) => (b[1] as number) - (a[1] as number))
+                    .slice(0, 4)
+                    .map(([skill]) => (
+                      <span key={skill} className="px-2 py-0.5 bg-white/10 text-white/90 text-[10px] font-bold rounded">
+                        {skill.replace('_', ' ')}
+                      </span>
+                    )) : (
+                      <span className="text-white/70 text-xs italic">No skills extracted yet</span>
+                    )}
+                </div>
+              </div>
+
+              {collegeInfo?.degree && (
+                <div>
+                  <span className="text-white/50 text-[10px] uppercase tracking-wider font-bold">Education</span>
+                  <p className="text-white/90 text-[12px]">{collegeInfo.degree}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

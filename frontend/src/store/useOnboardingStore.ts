@@ -3,9 +3,12 @@ import { devtools } from 'zustand/middleware';
 
 export interface ParsedResumeData {
   name?: string | null;
+  email?: string | null;
+  phone?: string | null;
   college_name?: string | null;
   degree?: string | null;
   github_url?: string | null;
+  linkedin_url?: string | null;
   raw_skills?: string[];
   experience_summary?: string;
   projects?: string[];
@@ -15,6 +18,7 @@ export interface OnboardingAiData {
   parsed_resume: ParsedResumeData;
   skill_vector: Record<string, number>;
   semantic_embedding: number[];
+  raw_text?: string;
 }
 
 export interface OnboardingState {

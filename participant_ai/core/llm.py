@@ -1,22 +1,20 @@
-"""Thin Gemini JSON wrapper shared by pipelines."""
+"""Thin Ollama JSON wrapper shared by pipelines."""
 
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
-import os
 import re
 from typing import Any, Optional
-
-from google import genai
-from google.genai import types
+import httpx
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = "gemini-2.5-flash"
+OLLAMA_MODEL = "llama3.2"
+OLLAMA_URL = "http://localhost:11434/api/generate"
 
-_MAX_RETRIES = 5
+_MAX_RETRIES = 3
 _INITIAL_BACKOFF_SECONDS = 2.0
 
 
@@ -24,19 +22,6 @@ class LLMCallError(Exception):
     def __init__(self, message: str, raw_response: Optional[str] = None) -> None:
         super().__init__(message)
         self.raw_response = raw_response
-
-
-def _api_key() -> str:
-    try:
-        from dotenv import load_dotenv
-        load_dotenv()
-    except ImportError:
-        pass
-    
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        raise EnvironmentError("GEMINI_API_KEY is not set.")
-    return key
 
 
 def _strip_fences(text: str) -> str:
@@ -57,41 +42,46 @@ def _parse_json(raw_text: str) -> dict:
 
 def _transient(exc: Exception) -> bool:
     err_str = str(exc).lower()
-    if "rate" in err_str or "quota" in err_str or "500" in err_str or "503" in err_str:
+    if "rate" in err_str or "quota" in err_str or "500" in err_str or "503" in err_str or "timeout" in err_str or "connect" in err_str:
         return True
     return False
 
 async def call_json_async(prompt: str) -> dict:
-    """Call Gemini asynchronously, parse JSON, retry transient errors twice."""
-    client = genai.Client(api_key=_api_key())
+    """Call Ollama asynchronously, parse JSON, retry transient errors."""
     last_error: Optional[Exception] = None
 
-    for attempt in range(_MAX_RETRIES + 1):
-        try:
-            response = await client.aio.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.2,
-                )
-            )
-            text = response.text
-            if not text:
-                raise LLMCallError("Empty response.")
-            return _parse_json(text)
-        except LLMCallError:
-            raise
-        except Exception as exc:
-            last_error = exc
-            if attempt < _MAX_RETRIES and _transient(exc):
-                backoff = _INITIAL_BACKOFF_SECONDS * (2**attempt)
-                logger.warning("Gemini transient error, retry in %.1fs: %s", backoff, exc)
-                await asyncio.sleep(backoff)
-                continue
-            raise LLMCallError(f"Gemini call failed: {exc}", raw_response=str(exc)) from exc
+    payload = {
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "format": "json",
+        "stream": False,
+        "options": {
+            "temperature": 0.2
+        }
+    }
 
-    raise LLMCallError(f"Gemini call failed after retries: {last_error}", raw_response=str(last_error))
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        for attempt in range(_MAX_RETRIES + 1):
+            try:
+                response = await client.post(OLLAMA_URL, json=payload)
+                response.raise_for_status()
+                data = response.json()
+                text = data.get("response", "")
+                if not text:
+                    raise LLMCallError("Empty response.")
+                return _parse_json(text)
+            except LLMCallError:
+                raise
+            except Exception as exc:
+                last_error = exc
+                if attempt < _MAX_RETRIES and _transient(exc):
+                    backoff = _INITIAL_BACKOFF_SECONDS * (2**attempt)
+                    logger.warning("Ollama transient error, retry in %.1fs: %s", backoff, exc)
+                    await asyncio.sleep(backoff)
+                    continue
+                raise LLMCallError(f"Ollama call failed: {exc}", raw_response=str(exc)) from exc
+
+    raise LLMCallError(f"Ollama call failed after retries: {last_error}", raw_response=str(last_error))
 
 
 def call_json(prompt: str) -> dict:

@@ -1,16 +1,47 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { useEffect, useState } from "react";
+
+interface Hackathon {
+  id: string;
+  name: string;
+  theme: string;
+  description: string;
+  status: string;
+  registration_start: string;
+  registration_end: string;
+  event_start: string;
+  event_end: string;
+  public_slug: string;
+}
 
 export default function OrganizerDashboard() {
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/hackathons/')
+      .then(res => res.json())
+      .then(data => {
+        setHackathons(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load hackathons", err);
+        setIsLoading(false);
+      });
+  }, []);
+
+  const activeCount = hackathons.filter(h => h.status === 'active' || h.status === 'published').length;
+
   return (
     <div className="p-4 md:p-6 h-[calc(100vh-64px)] max-w-7xl mx-auto flex flex-col gap-4 md:gap-6 w-full overflow-hidden">
       {/* Page Heading */}
       <div className="flex justify-between items-end flex-shrink-0">
         <div>
           <h2 className="font-headline-md text-[24px] md:text-[28px] text-primary">Dashboard Overview</h2>
-          <p className="text-on-surface-variant mt-1 text-sm">Welcome back. Here's what's happening across your 12 active hackathons.</p>
+          <p className="text-on-surface-variant mt-1 text-sm">Welcome back. Here's what's happening across your {hackathons.length} hackathons.</p>
         </div>
         <div className="flex gap-3">
           <div className="flex items-center px-4 py-2 bg-surface-container-low rounded-lg border border-outline-variant/30 text-label-sm gap-2">
@@ -31,8 +62,8 @@ export default function OrganizerDashboard() {
         <div className="bg-white p-4 rounded-xl shadow-sm border border-outline-variant/20 hover:shadow-md transition-shadow">
           <p className="text-[9px] uppercase tracking-widest text-on-surface-variant/60 font-bold mb-1">Hackathons</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold">12</span>
-            <span className="text-primary text-[10px] font-bold bg-primary-fixed px-1.5 py-0.5 rounded">+2</span>
+            <span className="text-2xl font-bold">{isLoading ? "-" : hackathons.length}</span>
+            <span className="text-primary text-[10px] font-bold bg-primary-fixed px-1.5 py-0.5 rounded">All</span>
           </div>
           <p className="text-[9px] text-on-surface-variant/40 mt-1">All time events</p>
         </div>
@@ -40,7 +71,7 @@ export default function OrganizerDashboard() {
         <div className="bg-white p-4 rounded-xl shadow-sm border border-outline-variant/20 hover:shadow-md transition-shadow">
           <p className="text-[9px] uppercase tracking-widest text-on-surface-variant/60 font-bold mb-1">Active</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold">3</span>
+            <span className="text-2xl font-bold">{isLoading ? "-" : activeCount}</span>
             <span className="w-2 h-2 rounded-full bg-primary/40 animate-pulse"></span>
           </div>
           <p className="text-[9px] text-on-surface-variant/40 mt-1">Currently running</p>
@@ -93,61 +124,44 @@ export default function OrganizerDashboard() {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Hackathon Card 1 */}
-              <Link href="/organizer/hackathons/winter-2024" className="block group">
-                <div className="bg-white rounded-xl border border-outline-variant/30 p-4 shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="bg-primary-container/20 p-2 rounded-lg text-primary">
-                      <span className="material-symbols-outlined text-[24px]">event</span>
-                    </div>
-                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase tracking-wider">Live</span>
-                  </div>
-                  <h4 className="font-headline-sm text-[16px] text-on-surface font-bold group-hover:text-primary transition-colors">Winter 2024 Tech Bloom</h4>
-                  <p className="text-[12px] text-on-surface-variant mt-1 line-clamp-1">AI-driven solutions for a sustainable future.</p>
-                  
-                  <div className="flex items-center gap-4 mt-4 pt-4 border-t border-outline-variant/20">
-                    <div>
-                      <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Participants</p>
-                      <p className="font-bold text-[14px] text-on-surface">1,240</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Submissions</p>
-                      <p className="font-bold text-[14px] text-on-surface">852</p>
-                    </div>
-                    <div className="ml-auto flex items-center justify-center w-8 h-8 rounded-full bg-surface-container-low group-hover:bg-primary/10 text-on-surface-variant group-hover:text-primary transition-colors">
-                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                    </div>
-                  </div>
+              {isLoading && <p className="text-sm text-on-surface-variant">Loading hackathons...</p>}
+              {!isLoading && hackathons.length === 0 && (
+                <div className="col-span-2 text-center p-8 bg-surface-container-low rounded-xl border border-dashed border-outline-variant/50">
+                  <p className="text-sm text-on-surface-variant mb-2">You haven't created any hackathons yet.</p>
+                  <Link href="/organizer/hackathons/create/step-1">
+                    <button className="text-primary font-bold text-sm">Create your first hackathon →</button>
+                  </Link>
                 </div>
-              </Link>
+              )}
               
-              {/* Hackathon Card 2 */}
-              <Link href="/organizer/hackathons/global-ai-2024" className="block group">
-                <div className="bg-white rounded-xl border border-outline-variant/30 p-4 shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="bg-secondary-container/20 p-2 rounded-lg text-secondary">
-                      <span className="material-symbols-outlined text-[24px]">rocket_launch</span>
+              {hackathons.map((h) => (
+                <Link key={h.id} href={`/organizer/hackathons/${h.public_slug || h.id}`} className="block group">
+                  <div className="bg-white rounded-xl border border-outline-variant/30 p-4 shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer h-full flex flex-col">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="bg-primary-container/20 p-2 rounded-lg text-primary">
+                        <span className="material-symbols-outlined text-[24px]">event</span>
+                      </div>
+                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider ${h.status === 'draft' ? 'bg-surface-variant text-on-surface-variant' : 'bg-green-100 text-green-700'}`}>
+                        {h.status}
+                      </span>
                     </div>
-                    <span className="px-2 py-0.5 bg-surface-variant text-on-surface-variant text-[10px] font-bold rounded uppercase tracking-wider">Upcoming</span>
+                    <h4 className="font-headline-sm text-[16px] text-on-surface font-bold group-hover:text-primary transition-colors">{h.name}</h4>
+                    <p className="text-[12px] text-on-surface-variant mt-1 line-clamp-2 flex-grow">{h.description || h.theme || 'No description provided.'}</p>
+                    
+                    <div className="flex items-center gap-4 mt-4 pt-4 border-t border-outline-variant/20">
+                      <div>
+                        <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Starts</p>
+                        <p className="font-bold text-[12px] text-on-surface">
+                          {h.event_start ? new Date(h.event_start).toLocaleDateString() : 'TBD'}
+                        </p>
+                      </div>
+                      <div className="ml-auto flex items-center justify-center w-8 h-8 rounded-full bg-surface-container-low group-hover:bg-primary/10 text-on-surface-variant group-hover:text-primary transition-colors">
+                        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                      </div>
+                    </div>
                   </div>
-                  <h4 className="font-headline-sm text-[16px] text-on-surface font-bold group-hover:text-primary transition-colors">Global AI Hackathon</h4>
-                  <p className="text-[12px] text-on-surface-variant mt-1 line-clamp-1">Pushing the boundaries of generative models.</p>
-                  
-                  <div className="flex items-center gap-4 mt-4 pt-4 border-t border-outline-variant/20">
-                    <div>
-                      <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Registered</p>
-                      <p className="font-bold text-[14px] text-on-surface">450</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Days Left</p>
-                      <p className="font-bold text-[14px] text-on-surface">14</p>
-                    </div>
-                    <div className="ml-auto flex items-center justify-center w-8 h-8 rounded-full bg-surface-container-low group-hover:bg-primary/10 text-on-surface-variant group-hover:text-primary transition-colors">
-                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
+                </Link>
+              ))}
             </div>
           </div>
 

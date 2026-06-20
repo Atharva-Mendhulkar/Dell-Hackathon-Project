@@ -1,9 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useHackathonStore } from "@/store/useHackathonStore";
 
 export default function CreateHackathonStep1() {
+  const router = useRouter();
+  const { basicInfo, setBasicInfo, setDraftId } = useHackathonStore();
+
+  const handleNext = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('http://127.0.0.1:8000/hackathons/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(basicInfo)
+      });
+      if (!res.ok) throw new Error("Failed to create draft");
+      const data = await res.json();
+      setDraftId(data.id);
+      router.push("/organizer/hackathons/create/step-2");
+    } catch (err) {
+      console.error(err);
+      alert("Error saving draft hackathon");
+    }
+  };
+
   return (
     <div className="max-w-[1000px] mx-auto px-margin-desktop py-stack-lg w-full">
       {/* Horizontal Stepper */}
@@ -52,11 +74,11 @@ export default function CreateHackathonStep1() {
           <div className="space-y-stack-md">
             <div className="group">
               <label className="block font-label-md text-on-surface mb-2 font-bold group-focus-within:text-primary transition-colors">Hackathon Name</label>
-              <input className="w-full bg-surface-container-lowest border-outline-variant rounded-xl py-4 px-5 font-body-md transition-all focus:border-primary focus:ring-0" placeholder="e.g. Sustainable Futures 2024" type="text" />
+              <input required value={basicInfo.name} onChange={e => setBasicInfo({ name: e.target.value })} className="w-full bg-surface-container-lowest border-outline-variant rounded-xl py-4 px-5 font-body-md transition-all focus:border-primary focus:ring-0" placeholder="e.g. Sustainable Futures 2024" type="text" />
             </div>
             <div className="group">
               <label className="block font-label-md text-on-surface mb-2 font-bold group-focus-within:text-primary transition-colors">Theme</label>
-              <select className="w-full bg-surface-container-lowest border-outline-variant rounded-xl py-4 px-5 font-body-md transition-all focus:border-primary focus:ring-0 appearance-none">
+              <select value={basicInfo.theme} onChange={e => setBasicInfo({ theme: e.target.value })} className="w-full bg-surface-container-lowest border-outline-variant rounded-xl py-4 px-5 font-body-md transition-all focus:border-primary focus:ring-0 appearance-none">
                 <option>Social Impact</option>
                 <option>Artificial Intelligence</option>
                 <option>Fintech Innovation</option>
@@ -67,11 +89,11 @@ export default function CreateHackathonStep1() {
             <div className="grid grid-cols-2 gap-4">
               <div className="group">
                 <label className="block font-label-md text-on-surface mb-2 font-bold group-focus-within:text-primary transition-colors">Min Team Size</label>
-                <input className="w-full bg-surface-container-lowest border-outline-variant rounded-xl py-4 px-5 font-body-md transition-all focus:border-primary focus:ring-0" min="1" type="number" defaultValue="1" />
+                <input value={basicInfo.min_team_size} onChange={e => setBasicInfo({ min_team_size: parseInt(e.target.value) })} className="w-full bg-surface-container-lowest border-outline-variant rounded-xl py-4 px-5 font-body-md transition-all focus:border-primary focus:ring-0" min="1" type="number" />
               </div>
               <div className="group">
                 <label className="block font-label-md text-on-surface mb-2 font-bold group-focus-within:text-primary transition-colors">Max Team Size</label>
-                <input className="w-full bg-surface-container-lowest border-outline-variant rounded-xl py-4 px-5 font-body-md transition-all focus:border-primary focus:ring-0" min="1" type="number" defaultValue="4" />
+                <input value={basicInfo.max_team_size} onChange={e => setBasicInfo({ max_team_size: parseInt(e.target.value) })} className="w-full bg-surface-container-lowest border-outline-variant rounded-xl py-4 px-5 font-body-md transition-all focus:border-primary focus:ring-0" min="1" type="number" />
               </div>
             </div>
           </div>
@@ -79,7 +101,7 @@ export default function CreateHackathonStep1() {
           {/* Right Column: Description */}
           <div className="group">
             <label className="block font-label-md text-on-surface mb-2 font-bold group-focus-within:text-primary transition-colors">Description</label>
-            <textarea className="w-full h-full min-h-[280px] bg-surface-container-lowest border-outline-variant rounded-xl py-4 px-5 font-body-md transition-all focus:border-primary focus:ring-0 resize-none" placeholder="Tell your story. What makes this hackathon unique? What are the overarching goals?"></textarea>
+            <textarea value={basicInfo.description} onChange={e => setBasicInfo({ description: e.target.value })} className="w-full h-full min-h-[280px] bg-surface-container-lowest border-outline-variant rounded-xl py-4 px-5 font-body-md transition-all focus:border-primary focus:ring-0 resize-none" placeholder="Tell your story. What makes this hackathon unique? What are the overarching goals?"></textarea>
           </div>
         </div>
 
@@ -94,11 +116,11 @@ export default function CreateHackathonStep1() {
             <div className="grid grid-cols-2 gap-4">
               <div className="group">
                 <label className="block font-label-sm text-on-surface-variant mb-1">Start Date</label>
-                <input className="w-full bg-surface border-outline-variant rounded-lg py-2 px-3 font-body-md focus:border-primary focus:ring-0" type="date" />
+                <input value={basicInfo.registration_start} onChange={e => setBasicInfo({ registration_start: e.target.value })} className="w-full bg-surface border-outline-variant rounded-lg py-2 px-3 font-body-md focus:border-primary focus:ring-0" type="date" />
               </div>
               <div className="group">
                 <label className="block font-label-sm text-on-surface-variant mb-1">End Date</label>
-                <input className="w-full bg-surface border-outline-variant rounded-lg py-2 px-3 font-body-md focus:border-primary focus:ring-0" type="date" />
+                <input value={basicInfo.registration_end} onChange={e => setBasicInfo({ registration_end: e.target.value })} className="w-full bg-surface border-outline-variant rounded-lg py-2 px-3 font-body-md focus:border-primary focus:ring-0" type="date" />
               </div>
             </div>
           </div>
@@ -112,11 +134,11 @@ export default function CreateHackathonStep1() {
             <div className="grid grid-cols-2 gap-4">
               <div className="group">
                 <label className="block font-label-sm text-on-surface-variant mb-1">Start Date</label>
-                <input className="w-full bg-surface border-outline-variant rounded-lg py-2 px-3 font-body-md focus:border-primary focus:ring-0" type="date" />
+                <input value={basicInfo.event_start} onChange={e => setBasicInfo({ event_start: e.target.value })} className="w-full bg-surface border-outline-variant rounded-lg py-2 px-3 font-body-md focus:border-primary focus:ring-0" type="date" />
               </div>
               <div className="group">
                 <label className="block font-label-sm text-on-surface-variant mb-1">End Date</label>
-                <input className="w-full bg-surface border-outline-variant rounded-lg py-2 px-3 font-body-md focus:border-primary focus:ring-0" type="date" />
+                <input value={basicInfo.event_end} onChange={e => setBasicInfo({ event_end: e.target.value })} className="w-full bg-surface border-outline-variant rounded-lg py-2 px-3 font-body-md focus:border-primary focus:ring-0" type="date" />
               </div>
             </div>
           </div>
@@ -138,12 +160,10 @@ export default function CreateHackathonStep1() {
             <span className="material-symbols-outlined text-sm">inventory_2</span>
             Save Draft
           </button>
-          <Link href="/organizer/hackathons/create/step-2">
-            <button className="px-10 py-4 rounded-full font-label-md bg-tertiary text-white hover:bg-tertiary-fixed-variant shadow-lg shadow-tertiary/20 transform transition-all hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-3" type="button">
-              Next: Problem Statements
-              <span className="material-symbols-outlined">arrow_forward</span>
-            </button>
-          </Link>
+          <button onClick={handleNext} className="px-10 py-4 rounded-full font-label-md bg-tertiary text-white hover:bg-tertiary-fixed-variant shadow-lg shadow-tertiary/20 transform transition-all hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-3" type="button">
+            Next: Problem Statements
+            <span className="material-symbols-outlined">arrow_forward</span>
+          </button>
         </div>
       </form>
     </div>

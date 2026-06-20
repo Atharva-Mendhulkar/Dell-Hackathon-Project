@@ -2,6 +2,7 @@
 
 import { useOnboardingStore } from "@/store/useOnboardingStore";
 import { AnimatePresence, motion } from "framer-motion";
+import { Suspense } from "react";
 
 // Placeholder components for the 8 steps. We will implement these in separate files soon.
 import Step1Resume from "./steps/Step1Resume";
@@ -29,10 +30,12 @@ export default function ParticipantOnboardingWizard() {
   };
 
   return (
-    <div className="w-full max-w-2xl px-6">
-      <AnimatePresence mode="wait">
-        {renderStep()}
-      </AnimatePresence>
-    </div>
+    <Suspense fallback={null}>
+      <div className="w-full max-w-2xl px-6">
+        <AnimatePresence mode="wait">
+          {renderStep()}
+        </AnimatePresence>
+      </div>
+    </Suspense>
   );
 }

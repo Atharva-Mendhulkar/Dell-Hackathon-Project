@@ -5,28 +5,46 @@ import StepWrapper from "@/components/onboarding/StepWrapper";
 import { ArrowRight, Mail, CheckCircle2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from "@/utils/supabase/client";
+import { useSearchParams } from "next/navigation";
 
 type OTPState = "idle" | "sending" | "sent" | "verifying" | "verified";
 
 export default function Step3Email() {
+  const searchParams = useSearchParams();
+  const urlEmail = searchParams.get("email");
   const { email, updateData, nextStep } = useOnboardingStore();
-  const [localEmail, setLocalEmail] = useState(email);
-  const [otpState, setOtpState] = useState<OTPState>("idle");
+  const [localEmail, setLocalEmail] = useState(email || urlEmail || "");
+  const [otpState, setOtpState] = useState<OTPState>("sent");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const handleSendOTP = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!localEmail.includes("@")) return;
-    updateData({ email: localEmail });
-    setOtpState("sending");
-    
-    // Simulate API call
-    setTimeout(() => {
-      setOtpState("sent");
+  useEffect(() => {
+    if (urlEmail && !email) {
+      updateData({ email: urlEmail });
+    }
+  }, [urlEmail, email, updateData]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setLocalEmail(user.email);
+        updateData({ email: user.email });
+      }
+    };
+    if (!localEmail) {
+      fetchUser();
+    }
+  }, [localEmail, updateData]);
+
+  useEffect(() => {
+    // Focus the first OTP input after render
+    if (otpState === "sent") {
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
-    }, 1500);
-  };
+    }
+  }, [otpState]);
 
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) value = value[value.length - 1]; // only take last char
@@ -67,41 +85,7 @@ export default function Step3Email() {
       </div>
 
       <AnimatePresence mode="wait">
-        {otpState === "idle" || otpState === "sending" ? (
-          <motion.form 
-            key="email-form"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            onSubmit={handleSendOTP} 
-            className="space-y-6"
-          >
-            <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-on-surface-variant/50 group-focus-within:text-primary transition-colors" />
-              <input 
-                type="email" 
-                placeholder="Email Address" 
-                value={localEmail}
-                onChange={(e) => setLocalEmail(e.target.value)}
-                className="w-full pl-14 pr-4 py-4 bg-surface-container-low border border-outline-variant/30 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-[18px] font-medium"
-                autoFocus
-                disabled={otpState === "sending"}
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={otpState === "sending" || !localEmail}
-              className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-[16px] flex items-center justify-center gap-2 hover:bg-primary/90 transition-all hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-70 disabled:hover:translate-y-0"
-            >
-              {otpState === "sending" ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>Send OTP <ArrowRight className="w-5 h-5" /></>
-              )}
-            </button>
-          </motion.form>
-        ) : (
+        {otpState === "verifying" || otpState === "verified" || otpState === "sent" ? (
           <motion.div
             key="otp-form"
             initial={{ opacity: 0, y: 10 }}
@@ -146,12 +130,12 @@ export default function Step3Email() {
               )}
               {otpState === "sent" && (
                 <p className="text-[13px] text-on-surface-variant font-medium">
-                  Code sent to <span className="text-on-surface font-bold">{localEmail}</span>
+                  Code sent to <span className="text-on-surface font-bold">{localEmail || "your email"}</span>
                 </p>
               )}
             </div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
     </StepWrapper>
   );

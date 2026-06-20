@@ -21,7 +21,7 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
-    return redirect('/auth/participant?error=' + encodeURIComponent(error.message))
+    return redirect('/auth/participant?mode=signin&error=' + encodeURIComponent(error.message))
   }
 
   revalidatePath('/', 'layout')
@@ -44,16 +44,20 @@ export async function signup(formData: FormData) {
   const { data: signUpData, error } = await supabase.auth.signUp(data)
 
   if (error) {
-    return redirect('/auth/participant?error=' + encodeURIComponent(error.message))
+    // If they already exist, try to log them in automatically to keep the flow smooth
+    if (error.message.includes("User already registered") || error.message.includes("already registered")) {
+      const { error: loginError } = await supabase.auth.signInWithPassword(data);
+      if (!loginError) {
+        revalidatePath('/', 'layout');
+        return redirect('/onboarding/participant');
+      }
+    }
+    return redirect('/auth/participant?mode=signup&error=' + encodeURIComponent(error.message))
   }
 
-  // If email confirmation is enabled in Supabase, session will be null
-  if (signUpData.user && !signUpData.session) {
-    return redirect('/auth/participant?error=' + encodeURIComponent("Please check your email to confirm your account before logging in. Or disable 'Confirm email' in Supabase settings."))
-  }
-
+  // Pass email in URL to onboarding so it can be picked up even if session is delayed
   revalidatePath('/', 'layout')
-  redirect('/onboarding/participant')
+  redirect(`/onboarding/participant?email=${encodeURIComponent(data.email)}`)
 }
 
 export async function loginOrganizer(formData: FormData) {
@@ -72,7 +76,7 @@ export async function loginOrganizer(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
-    return redirect('/auth/organizer?error=' + encodeURIComponent(error.message))
+    return redirect('/auth/organizer?mode=signin&error=' + encodeURIComponent(error.message))
   }
 
   revalidatePath('/', 'layout')
@@ -103,11 +107,14 @@ export async function signupOrganizer(formData: FormData) {
   })
 
   if (error) {
-    return redirect('/auth/organizer?error=' + encodeURIComponent(error.message))
-  }
-
-  if (signUpData.user && !signUpData.session) {
-    return redirect('/auth/organizer?error=' + encodeURIComponent("Please check your email to confirm your account before logging in. Or disable 'Confirm email' in Supabase settings."))
+    if (error.message.includes("User already registered") || error.message.includes("already registered")) {
+      const { error: loginError } = await supabase.auth.signInWithPassword(data);
+      if (!loginError) {
+        revalidatePath('/', 'layout');
+        return redirect('/organizer/dashboard');
+      }
+    }
+    return redirect('/auth/organizer?mode=signup&error=' + encodeURIComponent(error.message))
   }
 
   revalidatePath('/', 'layout')

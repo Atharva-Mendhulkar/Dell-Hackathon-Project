@@ -1,9 +1,61 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useHackathonStore, ReviewerInvite } from "@/store/useHackathonStore";
 
 export default function CreateHackathonStep4() {
+  const router = useRouter();
+  const { draftId, reviewers, setReviewers } = useHackathonStore();
+
+  const [email, setEmail] = useState("");
+  const [expertise, setExpertise] = useState("AI & ML");
+  const [organization, setOrganization] = useState("");
+
+  const handleInvite = () => {
+    if (!email) return;
+    
+    const newReviewer: ReviewerInvite = {
+      name: "", // Can be filled if we add a name field
+      email,
+      institution: organization,
+      expertise_domains: [expertise]
+    };
+    
+    setReviewers([...reviewers, newReviewer]);
+    setEmail("");
+    setExpertise("AI & ML");
+    setOrganization("");
+  };
+
+  const removeReviewer = (index: number) => {
+    const updated = [...reviewers];
+    updated.splice(index, 1);
+    setReviewers(updated);
+  };
+
+  const handleNext = async () => {
+    if (!draftId) {
+      alert("Missing draft Hackathon ID. Please return to step 1 and save.");
+      return;
+    }
+    
+    try {
+      if (reviewers.length > 0) {
+        const res = await fetch(`http://127.0.0.1:8000/hackathons/${draftId}/team`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(reviewers)
+        });
+        if (!res.ok) throw new Error("Failed to invite reviewers");
+      }
+      router.push("/organizer/hackathons/create/step-5");
+    } catch (err) {
+      console.error(err);
+      alert("Error inviting reviewers");
+    }
+  };
   return (
     <div className="p-margin-desktop max-w-container-max mx-auto w-full">
       {/* Stepper Container */}
@@ -62,16 +114,16 @@ export default function CreateHackathonStep4() {
               <p className="font-body-md text-on-surface-variant">Nominate professionals to judge projects and provide technical feedback to participants.</p>
             </header>
             
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); handleInvite(); }}>
               <div>
                 <label className="block font-label-md text-on-surface mb-2">Reviewer Email</label>
-                <input className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 focus:ring-2 focus:ring-tertiary/20 focus:border-tertiary transition-all outline-none" placeholder="colleague@industry.com" type="email"/>
+                <input required value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 focus:ring-2 focus:ring-tertiary/20 focus:border-tertiary transition-all outline-none" placeholder="colleague@industry.com" type="email"/>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block font-label-md text-on-surface mb-2">Expertise</label>
-                  <select className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 focus:ring-2 focus:ring-tertiary/20 focus:border-tertiary outline-none appearance-none cursor-pointer">
+                  <select value={expertise} onChange={e => setExpertise(e.target.value)} className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 focus:ring-2 focus:ring-tertiary/20 focus:border-tertiary outline-none appearance-none cursor-pointer">
                     <option>AI & ML</option>
                     <option>Web3/Blockchain</option>
                     <option>FinTech</option>
@@ -81,11 +133,11 @@ export default function CreateHackathonStep4() {
                 </div>
                 <div>
                   <label className="block font-label-md text-on-surface mb-2">Organization</label>
-                  <input className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 focus:ring-2 focus:ring-tertiary/20 focus:border-tertiary outline-none" placeholder="e.g. Anthropic" type="text"/>
+                  <input value={organization} onChange={e => setOrganization(e.target.value)} className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 focus:ring-2 focus:ring-tertiary/20 focus:border-tertiary outline-none" placeholder="e.g. Anthropic" type="text"/>
                 </div>
               </div>
               
-              <button className="w-full bg-primary text-white py-4 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2" type="button">
+              <button type="submit" className="w-full bg-primary text-white py-4 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>person_add</span>
                 Invite Reviewer
               </button>
@@ -101,89 +153,44 @@ export default function CreateHackathonStep4() {
                 <h2 className="font-headline-md text-on-surface mb-1">Pending Invitations</h2>
                 <p className="font-label-md text-on-surface-variant">Reviewers who haven't accepted yet.</p>
               </div>
-              <span className="px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full font-label-sm">3 Pending</span>
+              <span className="px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full font-label-sm">{reviewers.length} Pending</span>
             </div>
             
             <div className="space-y-4">
-              {/* Reviewer Item 1 */}
-              <div className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl hover:border-primary/30 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-surface-container-high border-2 border-white shadow-sm">
-                    <img className="w-full h-full object-cover" alt="Sarah J" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB72zoC6EQ8S-ePaQ2eKSf7KrF4QSKmaVyt4n9iznvt8qqtN2ORzK1kAA8ZrNKaBai1-zTId3YnHrO6vM1mjMa9NAnftg3ve7AX7dm2rYm23-nCVN5qIjiDKMj9MRnqmpXzKkk9niJwCaPyBlEm5E3qKmGuIuD4xEw2FyW8UzJmix1agwV7n9oMvS9kwePRb9ZtBQXQBeXLIvcpp2t_N0LkLMgyINr6r53Si1nMYyHg8Wl8dabzEN5pLNe2iv0eruXOVrc0iyQ_H2w"/>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-on-surface">sarah.j@techcorp.io</h4>
-                    <div className="flex gap-2 mt-1">
-                      <span className="px-2 py-0.5 bg-tertiary/10 text-tertiary rounded text-[10px] font-bold uppercase tracking-wider">AI Ethics</span>
-                      <span className="px-2 py-0.5 bg-on-surface-variant/10 text-on-surface-variant rounded text-[10px] font-bold uppercase tracking-wider">Stanford University</span>
+              {reviewers.map((reviewer, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl hover:border-primary/30 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-tertiary-container text-on-tertiary-container font-bold text-lg">
+                      {reviewer.email[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-on-surface">{reviewer.email}</h4>
+                      <div className="flex gap-2 mt-1">
+                        {reviewer.expertise_domains.map(domain => (
+                          <span key={domain} className="px-2 py-0.5 bg-tertiary/10 text-tertiary rounded text-[10px] font-bold uppercase tracking-wider">{domain}</span>
+                        ))}
+                        {reviewer.institution && (
+                          <span className="px-2 py-0.5 bg-on-surface-variant/10 text-on-surface-variant rounded text-[10px] font-bold uppercase tracking-wider">{reviewer.institution}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => removeReviewer(index)} className="w-10 h-10 rounded-full flex items-center justify-center text-error hover:bg-error-container transition-colors">
+                      <span className="material-symbols-outlined">delete</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button className="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
-                    <span className="material-symbols-outlined">mail</span>
-                  </button>
-                  <button className="w-10 h-10 rounded-full flex items-center justify-center text-error hover:bg-error-container transition-colors">
-                    <span className="material-symbols-outlined">delete</span>
-                  </button>
-                </div>
-              </div>
+              ))}
 
-              {/* Reviewer Item 2 */}
-              <div className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl hover:border-primary/30 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-surface-container-high border-2 border-white shadow-sm">
-                    <img className="w-full h-full object-cover" alt="Marcus V" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjHn4fhmcI0kUjaSqzjxgvqi5rMTzHNvwrVcHzOM9hbVjUSQ3cPkmVwO--SVLQD5HJ6qY8aBT5fhzgBj-czYe6E4V1I1qJRJhqxZeyuyW4ERJSYdfpDedhBNgEv0160GlmifHTryynXqt9VRaBjk03X1AuYo3VyzHtEm7oeJBRZFOGK8SMyg77cPXqzfGManN01YJNDlMjU5Zbx5ciGJTSt0L89DYfa92hFuv0KiK1M7tT3nnHHAMk_qob09RNvIvL3hW73uyHps0"/>
+              {reviewers.length === 0 && (
+                <div className="mt-8 flex flex-col items-center justify-center py-10 opacity-50">
+                  <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center mb-4">
+                    <span className="material-symbols-outlined text-[32px] text-outline">group_add</span>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-on-surface">marcus.v@chainlink.com</h4>
-                    <div className="flex gap-2 mt-1">
-                      <span className="px-2 py-0.5 bg-tertiary/10 text-tertiary rounded text-[10px] font-bold uppercase tracking-wider">Smart Contracts</span>
-                      <span className="px-2 py-0.5 bg-on-surface-variant/10 text-on-surface-variant rounded text-[10px] font-bold uppercase tracking-wider">Chainlink Labs</span>
-                    </div>
-                  </div>
+                  <p className="font-label-md text-on-surface-variant">Recommended: 5-8 reviewers for your hackathon scale.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button className="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
-                    <span className="material-symbols-outlined">mail</span>
-                  </button>
-                  <button className="w-10 h-10 rounded-full flex items-center justify-center text-error hover:bg-error-container transition-colors">
-                    <span className="material-symbols-outlined">delete</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Reviewer Item 3 */}
-              <div className="flex items-center justify-between p-4 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl hover:border-primary/30 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-surface-container-high border-2 border-white shadow-sm">
-                    <img className="w-full h-full object-cover" alt="Elena Design" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXAO1veJmNR7dnIbhaDiB8aLbQiPlbdQ92bG9lacYltGJJ3mINl4feFwHroLV16otRw-hmwCS5MReykim2MdieBPwGfKEIhV76Z1m--0CdfsuaIGJrqpQ4znmGb_O4HZeSbkwjksUbd1LZLijm-DpmK8nxShjQfgLrAhC93OliCeIyR6cYMWeMdJoH_-fKo_UOMLvdnZjNNHR2vsvmVoQfFg2KI5Bs3s8Jury0W18Ngo10UjeAPf8mJKvbqIWvgCUdnT6GOj5z04g"/>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-on-surface">elena_design@freelance.org</h4>
-                    <div className="flex gap-2 mt-1">
-                      <span className="px-2 py-0.5 bg-tertiary/10 text-tertiary rounded text-[10px] font-bold uppercase tracking-wider">UX/UI</span>
-                      <span className="px-2 py-0.5 bg-on-surface-variant/10 text-on-surface-variant rounded text-[10px] font-bold uppercase tracking-wider">Independent</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button className="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
-                    <span className="material-symbols-outlined">mail</span>
-                  </button>
-                  <button className="w-10 h-10 rounded-full flex items-center justify-center text-error hover:bg-error-container transition-colors">
-                    <span className="material-symbols-outlined">delete</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Empty State Filler / Illustration Area */}
-            <div className="mt-8 flex flex-col items-center justify-center py-10 opacity-50">
-              <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[32px] text-outline">group_add</span>
-              </div>
-              <p className="font-label-md text-on-surface-variant">Recommended: 5-8 reviewers for your hackathon scale.</p>
+              )}
             </div>
           </div>
         </div>
@@ -201,12 +208,10 @@ export default function CreateHackathonStep4() {
           <button className="w-full md:w-auto px-8 py-3 border border-outline text-on-surface-variant rounded-xl font-bold hover:bg-surface-variant transition-all">
             Save Draft
           </button>
-          <Link href="/organizer/hackathons/create/step-5" className="w-full md:w-auto">
-            <button className="w-full px-10 py-3 bg-tertiary text-white rounded-xl font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
-              Next: Review Summary
-              <span className="material-symbols-outlined">arrow_forward</span>
-            </button>
-          </Link>
+          <button onClick={handleNext} className="w-full md:w-auto px-10 py-3 bg-tertiary text-white rounded-xl font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+            Next: Review Summary
+            <span className="material-symbols-outlined">arrow_forward</span>
+          </button>
         </div>
       </footer>
     </div>

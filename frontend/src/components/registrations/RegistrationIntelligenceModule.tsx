@@ -185,21 +185,46 @@ export default function RegistrationIntelligenceModule({
   const [selectedId, setSelectedId] = useState(initialRegistrations[0]?.id);
   const [decisionFilter, setDecisionFilter] = useState<"ALL" | Decision>("ALL");
   const [query, setQuery] = useState("");
+  const [registrations, setRegistrations] = useState(initialRegistrations);
 
-  const selected = initialRegistrations.find((item) => item.id === selectedId) ?? initialRegistrations[0];
+  const selected = registrations.find((item) => item.id === selectedId) ?? registrations[0];
   const selectedHardStop = selected ? hasHardInvariant(selected) : false;
   const weightedScore = selected ? computeWeightedScore(selected) : 0;
 
   const filteredRegistrations = useMemo(
-    () => filterRegistrations(initialRegistrations, decisionFilter, query),
-    [initialRegistrations, decisionFilter, query]
+    () => filterRegistrations(registrations, decisionFilter, query),
+    [registrations, decisionFilter, query]
   );
   const {
     autoApprovedCount,
     manualReviewCount,
     duplicateCount,
     faceScanReviewCount,
-  } = getRegistrationMetrics(initialRegistrations);
+  } = getRegistrationMetrics(registrations);
+
+  const handleApprove = async () => {
+    if (!selected) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/participants/${selected.id}/approve`, { method: 'POST' });
+      if (!res.ok) throw new Error("Failed to approve");
+      setRegistrations(prev => prev.map(r => r.id === selected.id ? { ...r, decision: 'AUTO_APPROVED' } : r));
+    } catch (err) {
+      console.error(err);
+      alert("Error approving registration");
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selected) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/participants/${selected.id}/reject`, { method: 'POST' });
+      if (!res.ok) throw new Error("Failed to reject");
+      setRegistrations(prev => prev.map(r => r.id === selected.id ? { ...r, decision: 'REJECTED' } : r));
+    } catch (err) {
+      console.error(err);
+      alert("Error rejecting registration");
+    }
+  };
 
   if (!selected) {
     return (
@@ -647,10 +672,10 @@ export default function RegistrationIntelligenceModule({
               <button className="rounded-full border border-outline-variant px-3 py-2 text-[12px] font-bold text-on-surface-variant hover:border-primary hover:text-primary">
                 Clarify
               </button>
-              <button className="rounded-full border border-error/30 px-3 py-2 text-[12px] font-bold text-error hover:bg-error hover:text-on-error">
+              <button onClick={handleReject} className="rounded-full border border-error/30 px-3 py-2 text-[12px] font-bold text-error hover:bg-error hover:text-on-error">
                 Reject
               </button>
-              <button className="rounded-full bg-primary px-3 py-2 text-[12px] font-bold text-on-primary hover:bg-primary/90">
+              <button onClick={handleApprove} className="rounded-full bg-primary px-3 py-2 text-[12px] font-bold text-on-primary hover:bg-primary/90">
                 Approve
               </button>
             </div>

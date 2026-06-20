@@ -1,37 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useHackathonStore } from "@/store/useHackathonStore";
 
 export default function CreateHackathonStep3() {
-  const [rubrics, setRubrics] = useState([
-    { id: 1, name: "Innovation & Originality", weight: 30 },
-    { id: 2, name: "Technical Execution", weight: 40 },
-    { id: 3, name: "User Experience (UX)", weight: 15 },
-  ]);
+  const router = useRouter();
+  const { draftId, rubrics, setRubrics } = useHackathonStore();
+
+  useEffect(() => {
+    if (rubrics.length === 0) {
+      setRubrics([
+        { id: Date.now().toString() + "-1", name: "Innovation & Originality", weight: 30, score_min: 0, score_max: 10 },
+        { id: Date.now().toString() + "-2", name: "Technical Execution", weight: 40, score_min: 0, score_max: 10 },
+        { id: Date.now().toString() + "-3", name: "User Experience (UX)", weight: 15, score_min: 0, score_max: 10 },
+      ]);
+    }
+  }, [rubrics.length, setRubrics]);
 
   const totalWeight = rubrics.reduce((acc, curr) => acc + curr.weight, 0);
 
-  const handleWeightChange = (id: number, value: string) => {
+  const handleWeightChange = (id: string, value: string) => {
     const parsedValue = parseInt(value) || 0;
     setRubrics(
       rubrics.map((r) => (r.id === id ? { ...r, weight: parsedValue } : r))
     );
   };
 
-  const handleNameChange = (id: number, value: string) => {
+  const handleNameChange = (id: string, value: string) => {
     setRubrics(rubrics.map((r) => (r.id === id ? { ...r, name: value } : r)));
   };
 
   const addRubric = () => {
     setRubrics([
       ...rubrics,
-      { id: Date.now(), name: "Presentation & Pitch", weight: 0 },
+      { id: Date.now().toString(), name: "Presentation & Pitch", weight: 0, score_min: 0, score_max: 10 },
     ]);
   };
 
-  const deleteRubric = (id: number) => {
+  const deleteRubric = (id: string) => {
     setRubrics(rubrics.filter((r) => r.id !== id));
+  };
+
+  const handleNext = async () => {
+    if (!draftId) {
+      alert("Missing draft Hackathon ID. Please return to step 1 and save.");
+      return;
+    }
+    
+    if (totalWeight !== 100) {
+      alert("Weights must sum to 100%");
+      return;
+    }
+    
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/hackathons/${draftId}/rubric`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rubrics)
+      });
+      if (!res.ok) throw new Error("Failed to save rubrics");
+      router.push("/organizer/hackathons/create/step-4");
+    } catch (err) {
+      console.error(err);
+      alert("Error saving rubrics");
+    }
   };
 
   return (
@@ -80,13 +114,13 @@ export default function CreateHackathonStep3() {
         </div>
         <div className="divide-y divide-outline-variant/20">
           {rubrics.map((rubric) => (
-            <div key={rubric.id} className="grid grid-cols-[1fr_120px_60px] gap-gutter px-6 py-4 items-center hover:bg-surface/50 transition-colors">
+            <div key={rubric.id!} className="grid grid-cols-[1fr_120px_60px] gap-gutter px-6 py-4 items-center hover:bg-surface/50 transition-colors">
               <input 
                 className="bg-transparent border-none p-0 font-body-md text-on-surface placeholder:text-outline focus:ring-0 w-full" 
                 placeholder="e.g., Technical Complexity" 
                 type="text" 
                 value={rubric.name}
-                onChange={(e) => handleNameChange(rubric.id, e.target.value)}
+                onChange={(e) => handleNameChange(rubric.id!, e.target.value)}
               />
               <div className="relative flex items-center justify-end">
                 <input 
@@ -95,12 +129,12 @@ export default function CreateHackathonStep3() {
                   min="0" 
                   type="number" 
                   value={rubric.weight}
-                  onChange={(e) => handleWeightChange(rubric.id, e.target.value)}
+                  onChange={(e) => handleWeightChange(rubric.id!, e.target.value)}
                 />
                 <span className="ml-2 text-on-surface-variant font-label-md">%</span>
               </div>
               <button 
-                onClick={() => deleteRubric(rubric.id)}
+                onClick={() => deleteRubric(rubric.id!)}
                 className="text-on-surface-variant hover:text-error transition-colors flex justify-center"
               >
                 <span className="material-symbols-outlined text-[20px]">delete</span>
@@ -155,14 +189,13 @@ export default function CreateHackathonStep3() {
           <button className="w-full md:w-auto px-8 py-3 border border-outline-variant text-primary font-label-md rounded-xl hover:bg-surface-variant transition-colors">
             Save Draft
           </button>
-          <Link href="/organizer/hackathons/create/step-4" className="w-full md:w-auto">
-            <button 
-              disabled={totalWeight !== 100}
-              className="w-full px-10 py-3 bg-primary text-on-primary font-label-md rounded-xl shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
-            >
-              Next: Reviewers
-            </button>
-          </Link>
+          <button 
+            onClick={handleNext}
+            disabled={totalWeight !== 100}
+            className="w-full md:w-auto px-10 py-3 bg-primary text-on-primary font-label-md rounded-xl shadow-lg hover:shadow-xl hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none"
+          >
+            Next: Reviewers
+          </button>
         </div>
       </div>
     </div>

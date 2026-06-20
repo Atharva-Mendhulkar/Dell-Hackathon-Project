@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/server'
+import { createClient, createAdminClient } from '@/utils/supabase/server'
 import {
   type RegistrationCase,
   computeWeightedScore,
@@ -17,6 +17,8 @@ export type SubmitRegistrationPayload = {
   faceScanConsented?: boolean
   faceScanStatus?: RegistrationCase['faceScan']['status']
   faceScanScore?: number | null
+  skill_vector?: Record<string, number>
+  raw_text?: string
 }
 
 // Note: In a real environment, you'd perform FaceScan/RapidFuzz calls here.
@@ -73,8 +75,10 @@ export async function submitRegistration(payload: SubmitRegistrationPayload) {
   const decision = getDecisionForRegistration(intelligencePayload)
   const score = computeWeightedScore(intelligencePayload)
 
-  // 2. Persist to Supabase
+  // 2. Persist to Supabase Registrations
+  const registrationId = crypto.randomUUID()
   const dbPayload = {
+    id: registrationId,
     user_id: user.id,
     name: payload.name,
     email: payload.email,
@@ -102,11 +106,46 @@ export async function submitRegistration(payload: SubmitRegistrationPayload) {
     recommendation: `Server generated decision: ${decision}`
   }
 
-  const { error } = await supabase.from('registrations').insert(dbPayload)
+  const { error: regError } = await supabase.from('registrations').insert(dbPayload)
 
-  if (error) {
-    console.error('Registration insertion failed:', error)
-    return { success: false, error: error.message }
+  if (regError) {
+    console.error('Registration insertion failed:', regError)
+    return { success: false, error: regError.message }
+  }
+
+  // 3. If AUTO_APPROVED, create Participant Record
+  if (decision === 'AUTO_APPROVED') {
+    const participantPayload = {
+      user_id: user.id,
+      registration_id: registrationId,
+      name: payload.name,
+      email: payload.email,
+      college_name: payload.college,
+      github_url: payload.github,
+      declared_skills: payload.skills || [],
+      skill_vector: payload.skill_vector || {},
+      status: 'approved'
+    }
+
+    const { error: partError } = await supabase.from('participants').insert(participantPayload)
+    if (partError) {
+      console.error('Participant creation failed:', partError)
+      return { success: false, error: 'Failed to create participant profile: ' + partError.message }
+    }
+    
+    if (payload.raw_text) {
+      // Trigger background LLM parsing, await it to prevent Next.js from cancelling it
+      try {
+        const r = await fetch('http://127.0.0.1:8000/participants/process_resume_background', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user.id, raw_text: payload.raw_text })
+        });
+        if (!r.ok) console.error("Background LLM trigger returned:", r.status);
+      } catch (e) {
+        console.error("Background LLM trigger failed:", e);
+      }
+    }
   }
 
   return { success: true, decision }
@@ -122,7 +161,7 @@ export async function fetchRegistrations() {
     .order('created_at', { ascending: false })
 
   if (error || !data) {
-    console.error('Error fetching registrations:', error)
+    console.error('Error fetching registrations:', error ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : 'No data')
     return []
   }
 

@@ -10,7 +10,8 @@ import { login, signup } from "../actions";
 function ParticipantAuthContent() {
   const searchParams = useSearchParams();
   const errorMessage = searchParams.get("error");
-  const [isSignIn, setIsSignIn] = useState(true);
+  const mode = searchParams.get("mode");
+  const [isSignIn, setIsSignIn] = useState(mode !== "signup");
 
   return (
     <motion.div 

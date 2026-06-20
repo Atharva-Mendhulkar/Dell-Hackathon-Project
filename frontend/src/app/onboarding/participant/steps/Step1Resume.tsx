@@ -42,20 +42,22 @@ export default function Step1Resume() {
         
         updateData({ 
             fullName: parsed.name || "",
+            email: parsed.email || "",
+            phone: parsed.phone || "",
             collegeInfo: {
                 college: parsed.college_name || "",
                 degree: parsed.degree || "",
-                year: ""
+                year: parsed.year || ""
             },
             links: {
                 github: parsed.github_url || "",
-                linkedin: ""
+                linkedin: parsed.linkedin_url || ""
             },
-            resumeUploaded: true,
             aiData: {
                 parsed_resume: data.parsed_resume,
                 skill_vector: data.skill_vector,
-                semantic_embedding: data.semantic_embedding
+                semantic_embedding: data.semantic_embedding,
+                raw_text: data.raw_text
             }
         });
         

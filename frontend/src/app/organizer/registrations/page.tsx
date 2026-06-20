@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import RegistrationIntelligenceModule from "@/components/registrations/RegistrationIntelligenceModule";
 import { fetchRegistrations } from "@/app/actions/registration";
 

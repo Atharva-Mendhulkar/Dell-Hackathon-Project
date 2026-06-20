@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
+import { submitRegistration } from "@/app/actions/registration";
 
 export default function Step7Pipeline() {
   const state = useOnboardingStore();
@@ -28,19 +29,20 @@ export default function Step7Pipeline() {
   useEffect(() => {
     if (currentStep < pipeline.length) {
       if (currentStep === 5 && state.aiData) { // Participant Profile Created
-        // We do this asynchronously but let the visual pipeline continue
-        supabase.from('participants').insert({
-          id: crypto.randomUUID(),
+        submitRegistration({
           name: state.fullName,
-          college_name: state.collegeInfo.college,
-          github_url: state.links.github,
-          declared_skills: state.aiData.parsed_resume?.raw_skills || [],
-          skill_vector: state.aiData.skill_vector,
-          // Since the extension uses pgvector, semantic_embedding can be inserted directly
-          // Assuming there is a semantic_embedding column of type vector(384)
-          // semantic_embedding: state.aiData.semantic_embedding
-        }).then(({ error }) => {
-            if (error) console.error("Error saving participant:", error);
+          email: state.email || "",
+          college: state.collegeInfo.college || "N/A",
+          github: state.links.github || "N/A",
+          skills: state.aiData?.parsed_resume?.raw_skills || [],
+          skill_vector: state.aiData?.skill_vector || {},
+          raw_text: state.aiData?.raw_text || "",
+        }).then(res => {
+          if (!res.success) {
+            console.error("Failed to register participant via server action:", res.error);
+          }
+        }).catch(err => {
+          console.error("Error calling submitRegistration:", err);
         });
       }
       

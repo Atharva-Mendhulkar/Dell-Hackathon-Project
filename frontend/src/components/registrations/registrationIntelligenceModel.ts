@@ -2,7 +2,8 @@ export type Decision =
   | "AUTO_APPROVED"
   | "MANUAL_REVIEW"
   | "POTENTIAL_DUPLICATE"
-  | "HARD_DUPLICATE";
+  | "HARD_DUPLICATE"
+  | "REJECTED";
 
 export type FaceScanStatus = "verified" | "manual_review" | "review_required" | "not_consented";
 
@@ -177,6 +178,7 @@ export const decisionLabels: Record<Decision, string> = {
   MANUAL_REVIEW: "Manual review",
   POTENTIAL_DUPLICATE: "Potential duplicate",
   HARD_DUPLICATE: "Hard duplicate",
+  REJECTED: "Rejected",
 };
 
 export const decisionClasses: Record<Decision, string> = {
@@ -184,6 +186,7 @@ export const decisionClasses: Record<Decision, string> = {
   MANUAL_REVIEW: "bg-tertiary-fixed/70 text-on-tertiary-fixed-variant border-tertiary/20",
   POTENTIAL_DUPLICATE: "bg-error-container text-on-error-container border-error/20",
   HARD_DUPLICATE: "bg-error text-on-error border-error",
+  REJECTED: "bg-outline-variant/30 text-on-surface-variant border-outline-variant",
 };
 
 export const faceScanLabels: Record<FaceScanStatus, string> = {

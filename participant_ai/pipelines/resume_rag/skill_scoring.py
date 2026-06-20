@@ -2,11 +2,9 @@ import json
 import logging
 from typing import Tuple
 
-from participant_ai.core.llm import call_json_async
 from participant_ai.core.schemas import SkillVector
 from participant_ai.core.skill_taxonomy import SKILL_TAXONOMY, category_names
 from participant_ai.core.embeddings import generate_embedding
-from participant_ai.core.skill_taxonomy import SKILL_TAXONOMY, category_names
 
 logger = logging.getLogger(__name__)
 
@@ -42,38 +40,7 @@ def project_evidence(projects: list[str], category: str, project_cap: int = 3) -
             matches += 1
     return min(matches, project_cap) / project_cap
 
-async def llm_score_all_categories(resume_text: str, projects: list[str]) -> dict[str, float]:
-    """The ONE Groq call per resume. Build the prompt by injecting category_names()."""
-    valid_categories = category_names()
-    prompt = f"""Score this participant across exact skill categories based on evidence.
-
-Return JSON with ONE key "skill_vector", an object with EXACTLY these keys:
-{json.dumps(valid_categories)}
-
-Score ONLY these exact categories. Do not invent, add, or rename categories.
-Each value 0.0-1.0 = strength of evidence.
-
-Resume Evidence:
-- Projects: {json.dumps(projects)}
-- Snippet: {resume_text[:2000]}
-
-Strict JSON only."""
-    response = await call_json_async(prompt)
-    raw = response.get("skill_vector", {})
-    if not isinstance(raw, dict):
-        raw = {}
-    
-    # Safely extract floats
-    cleaned = {}
-    for k in valid_categories:
-        try:
-            cleaned[k] = float(raw.get(k, 0.0))
-        except (ValueError, TypeError):
-            cleaned[k] = 0.0
-            
-    return cleaned
-
-async def compute_skill_vector(resume_text: str, projects: list[str]) -> Tuple[SkillVector, list[float], dict]:
+async def compute_skill_vector(resume_text: str, projects: list[str], llm_scores: dict[str, float]) -> Tuple[SkillVector, list[float], dict]:
     """Combines all three components using the weighted formula."""
     valid_cats = category_names()
     breakdown_dict = {}
@@ -82,10 +49,7 @@ async def compute_skill_vector(resume_text: str, projects: list[str]) -> Tuple[S
     kw_scores = {cat: keyword_score(resume_text, cat) for cat in valid_cats}
     proj_scores = {cat: project_evidence(projects, cat) for cat in valid_cats}
     
-    # 2. Network call for LLM scores
-    llm_scores = await llm_score_all_categories(resume_text, projects)
-    
-    # 3. Combine
+    # 2. Combine
     final_scores = {}
     for cat in valid_cats:
         kw = kw_scores[cat]
