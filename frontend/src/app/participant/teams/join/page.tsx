@@ -249,51 +249,10 @@ export default function JoinTeam() {
           </div>
 
           {/* Team Compatibility Analysis */}
-          <div className="bg-white p-8 rounded-[40px] border border-surface-container-highest shadow-[0_20px_30px_-10px_rgba(214,203,191,0.3)] space-y-6">
-            <h3 className="font-headline-sm text-[24px]">Compatibility Score</h3>
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <div className="flex justify-between text-label-md">
-                  <span className="text-on-surface-variant">Technical Match</span>
-                  <span className="font-bold">92%</span>
-                </div>
-                <div className="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-primary" style={{ width: '92%' }}></div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-label-md">
-                  <span className="text-on-surface-variant">Domain Match</span>
-                  <span className="font-bold">85%</span>
-                </div>
-                <div className="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-primary" style={{ width: '85%' }}></div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-label-md">
-                  <span className="text-on-surface-variant">Collaboration Match</span>
-                  <span className="font-bold">78%</span>
-                </div>
-                <div className="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
-                  <div className="h-full bg-secondary" style={{ width: '78%' }}></div>
-                </div>
-              </div>
-              <div className="pt-6 border-t border-surface-container text-center">
-                <div className="text-label-sm text-on-surface-variant uppercase tracking-widest mb-1">Overall Fit Score</div>
-                <div className="text-[56px] font-bold text-primary leading-none">88<span className="text-2xl font-sans">%</span></div>
-              </div>
-            </div>
-          </div>
+          
 
           {/* Footer Card */}
-          <div className="bg-surface-container-low p-6 rounded-[32px] border border-outline-variant/30">
-            <p className="text-label-sm text-on-surface-variant">Don't see a perfect fit? Our AI updates recommendations every hour based on new team formations.</p>
-            <button className="mt-4 w-full py-3 text-primary font-bold hover:underline flex items-center justify-center gap-2">
-              Refresh My Profile
-              <span className="material-symbols-outlined text-[18px]">refresh</span>
-            </button>
-          </div>
+          
         </div>
       </aside>
     </div>

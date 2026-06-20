@@ -19,13 +19,8 @@ export default function TeamWorkspace() {
             <p className="font-headline-sm text-[24px] text-on-surface-variant font-normal italic">"Real-time monitoring of urban water usage"</p>
           </div>
           <div className="mt-6 md:mt-0 flex gap-3">
-            <button className="bg-surface border border-outline-variant text-on-surface-variant px-6 py-2.5 rounded-xl font-label-md hover:bg-surface-container transition-colors flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg">edit</span>
-              Edit Team
-            </button>
-            <button className="bg-primary text-on-primary px-6 py-2.5 rounded-xl font-label-md shadow-[0_20px_30px_-10px_rgba(214,203,191,0.4)] hover:opacity-90 active:scale-95 transition-all">
-              View Public Page
-            </button>
+    
+            
           </div>
         </div>
 
@@ -83,7 +78,7 @@ export default function TeamWorkspace() {
             {/* Project Section */}
             <section className="bg-surface-container-lowest p-8 rounded-[24px] shadow-[0_20px_30px_-10px_rgba(214,203,191,0.4)] border border-outline-variant/30 transition-transform duration-300 hover:-translate-y-1">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-headline-md text-[32px] text-on-surface">Project Definition</h3>
+                <h3 className="font-headline-md text-[32px] text-on-surface">Project Statement</h3>
                 <span className="material-symbols-outlined text-outline cursor-pointer hover:text-primary transition-colors">edit_note</span>
               </div>
               <div className="bg-surface-bright p-6 rounded-2xl border border-surface-variant mb-8">
@@ -123,7 +118,21 @@ export default function TeamWorkspace() {
                 </div>
               </div>
             </section>
+            <section className="bg-surface-container-lowest p-8 rounded-[24px] shadow-[0_20px_30px_-10px_rgba(214,203,191,0.4)] border border-outline-variant/30 transition-transform duration-300 hover:-translate-y-1">
+  <div className="mb-6">
+    <h3 className="font-headline-md text-[32px] text-on-surface mb-2">
+      Project Idea
+    </h3>
+    <p className="text-on-surface-variant text-body-md">
+      Briefly describe your solution, innovation, and expected impact.
+    </p>
+  </div>
 
+  <textarea
+    placeholder="Describe your project idea, solution approach, innovation, and expected impact..."
+    className="w-full min-h-[220px] bg-[#fffaf6] border-2 border-primary/20 rounded-2xl p-6 text-body-md text-on-surface placeholder:text-outline outline-none resize-none shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+  />
+</section>
             {/* Submission Section */}
             <section className="bg-surface-container-lowest p-8 rounded-[24px] shadow-[0_20px_30px_-10px_rgba(214,203,191,0.4)] border border-outline-variant/30 transition-transform duration-300 hover:-translate-y-1">
               <h3 className="font-headline-md text-[32px] text-on-surface mb-6">Submission Materials</h3>
@@ -164,7 +173,6 @@ export default function TeamWorkspace() {
             <section className="bg-surface-container-lowest p-6 rounded-[24px] shadow-[0_20px_30px_-10px_rgba(214,203,191,0.4)] transition-transform duration-300 hover:-translate-y-1">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-headline-sm text-[24px] text-on-surface">Team Members</h3>
-                <button className="text-primary text-label-sm font-bold">+ Invite</button>
               </div>
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
@@ -258,6 +266,7 @@ export default function TeamWorkspace() {
                   <div className="z-10 w-8 h-8 rounded-full bg-tertiary flex items-center justify-center text-on-tertiary ring-4 ring-tertiary/20">
                     <span className="material-symbols-outlined text-sm">edit</span>
                   </div>
+                  
                   <div>
                     <p className="font-label-md text-tertiary font-bold">Submission</p>
                     <p className="text-[11px] text-tertiary-fixed-dim">Currently Active</p>

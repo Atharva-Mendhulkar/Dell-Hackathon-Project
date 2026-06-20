@@ -44,36 +44,7 @@ export default function CreateTeam() {
               </div>
             </div>
 
-            {/* Strategic Focus Card */}
-            <div className="bg-surface-container-lowest rounded-xl p-stack-md border border-outline-variant/20 shadow-[0_20px_40px_-15px_rgba(214,203,191,0.4)]">
-              <h2 className="font-headline-sm text-[24px] text-primary mb-6">Strategic Focus</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="font-label-md text-label-md text-on-surface-variant">Domain</label>
-                  <select className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 focus:ring-2 focus:ring-tertiary outline-none font-body-md appearance-none">
-                    <option>Sustainability</option>
-                    <option>Fintech</option>
-                    <option>Biotech</option>
-                    <option>AI/ML Research</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="font-label-md text-label-md text-on-surface-variant flex justify-between">
-                    <span>Team Size Requirement</span>
-                    <span className="text-primary font-bold">{teamSize} Members</span>
-                  </label>
-                  <input 
-                    className="w-full h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary mt-4" 
-                    max="10" 
-                    min="2" 
-                    type="range" 
-                    value={teamSize}
-                    onChange={(e) => setTeamSize(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-            </div>
-
+            
             {/* Required Skills Module */}
             <div className="bg-surface-container-lowest rounded-xl p-stack-md border border-outline-variant/20 shadow-[0_20px_40px_-15px_rgba(214,203,191,0.4)]">
               <div className="flex justify-between items-center mb-6">
@@ -237,7 +208,7 @@ export default function CreateTeam() {
             {/* Recruitment Panel */}
             <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-[0_20px_40px_-15px_rgba(214,203,191,0.4)] overflow-hidden">
               <div className="flex border-b border-outline-variant/10">
-                {["Invite Friends", "By Email", "Pending"].map((tab) => (
+                {["Invite Friends", "By Email", "Requests Sent"].map((tab) => (
                   <button 
                     key={tab}
                     className={`flex-1 py-3 font-label-sm transition-colors ${
