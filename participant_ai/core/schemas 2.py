@@ -72,10 +72,7 @@ class SkillVector(BaseModel):
 class ParsedResume(BaseModel):
     name: Optional[str] = None
     college_name: Optional[str] = None
-    degree: Optional[str] = None
-    year_of_study: Optional[str] = None
     github_url: Optional[str] = None
-    linkedin_url: Optional[str] = None
     raw_skills: list[str] = Field(default_factory=list)
     experience_summary: str = ""
     projects: list[str] = Field(default_factory=list)
@@ -85,7 +82,6 @@ class Participant(BaseModel):
     id: str
     parsed_resume: ParsedResume
     skill_vector: SkillVector
-    semantic_embedding: Optional[list[float]] = None
     team_id: Optional[str] = None
 
 

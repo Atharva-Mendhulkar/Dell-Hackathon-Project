@@ -1,14 +1,18 @@
-from sqlalchemy import Column, String, Text, ARRAY, JSON, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, Text, ARRAY, String
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from .base import Base
 
+
 class Participant(Base):
-    __tablename__ = 'participants'
-    id = Column(String, primary_key=True, index=True)
+    __tablename__ = "participants"
+
+    id = Column(Text, primary_key=True)
     name = Column(Text, nullable=True)
     college_name = Column(Text, nullable=True)
+    year_of_study = Column(Text, nullable=True)
     github_url = Column(Text, nullable=True)
+    linkedin_url = Column(Text, nullable=True)
     declared_skills = Column(ARRAY(String), default=[])
-    skill_vector = Column(JSON, nullable=True)
-    team_id = Column(UUID, ForeignKey('teams.team_id'), nullable=True)
+    skill_vector = Column(JSONB, nullable=True)
+    team_id = Column(UUID(as_uuid=True), nullable=True)

@@ -1,62 +1,100 @@
-from __future__ import annotations
+import uuid
+from datetime import datetime, timezone
+from typing import List, Optional
 
-from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-
-from backend.app.database import execute, fetch_all
+from ..deps import get_db
+from ..models.idea_submission import IdeaSubmission
 
 router = APIRouter()
 
 
+# --------------- Pydantic schemas ---------------
+
 class SubmissionCreate(BaseModel):
-    hackathon_id: UUID
-    team_id: UUID
+    team_id: str
+    ps_id: Optional[str] = None
     title: str
-    description: str | None = None
-    tech_stack: list[str] = Field(default_factory=list)
-    github_repo: str | None = None
-    demo_url: str | None = None
-    pitch_url: str | None = None
+    description: Optional[str] = None
+    idea_vector: Optional[dict] = None
 
 
-@router.get("/")
-async def list_submissions(hackathon_id: UUID | None = None):
-    if hackathon_id:
-        return fetch_all(
-            "SELECT * FROM public.submissions WHERE hackathon_id = %s ORDER BY submitted_at DESC",
-            (str(hackathon_id),),
-        )
-    return fetch_all("SELECT * FROM public.submissions ORDER BY submitted_at DESC LIMIT 100")
+class SubmissionOut(BaseModel):
+    idea_id: str
+    team_id: Optional[str] = None
+    ps_id: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    idea_vector: Optional[dict] = None
+    submitted_at: Optional[str] = None
+    status: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 
-@router.post("/")
-async def create_submission(payload: SubmissionCreate):
-    row = execute(
-        """
-        INSERT INTO public.submissions (
-            hackathon_id, team_id, title, description, tech_stack,
-            github_repo, demo_url, pitch_url, status
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'submitted')
-        RETURNING *
-        """,
-        (
-            str(payload.hackathon_id),
-            str(payload.team_id),
-            payload.title,
-            payload.description,
-            payload.tech_stack,
-            payload.github_repo,
-            payload.demo_url,
-            payload.pitch_url,
-        ),
+# --------------- CRUD endpoints ---------------
+
+@router.post("/", response_model=SubmissionOut)
+async def create_submission(data: SubmissionCreate, db: Session = Depends(get_db)):
+    """Create a new idea submission for a team."""
+    submission = IdeaSubmission(
+        idea_id=uuid.uuid4(),
+        team_id=data.team_id,
+        ps_id=data.ps_id,
+        title=data.title,
+        description=data.description,
+        idea_vector=data.idea_vector,
+        submitted_at=datetime.now(timezone.utc),
+        status="submitted",
     )
-    if not row:
-        raise HTTPException(status_code=500, detail="Failed to create submission")
-    execute(
-        "SELECT public.append_audit_event('submission', %s::uuid, 'submitted', NULL, %s::jsonb)",
-        (row["id"], '{"source":"api"}'),
-    )
-    return row
+    db.add(submission)
+    db.commit()
+    db.refresh(submission)
+    return submission
+
+
+@router.get("/", response_model=List[SubmissionOut])
+async def list_submissions(db: Session = Depends(get_db)):
+    """List all submissions."""
+    return db.query(IdeaSubmission).all()
+
+
+@router.get("/team/{team_id}", response_model=List[SubmissionOut])
+async def get_submissions_by_team(team_id: str, db: Session = Depends(get_db)):
+    """Get all submissions for a specific team."""
+    return db.query(IdeaSubmission).filter(IdeaSubmission.team_id == team_id).all()
+
+
+@router.get("/{idea_id}", response_model=SubmissionOut)
+async def get_submission(idea_id: str, db: Session = Depends(get_db)):
+    """Get a submission by ID."""
+    s = db.query(IdeaSubmission).filter(IdeaSubmission.idea_id == idea_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    return s
+
+
+@router.put("/{idea_id}/status")
+async def update_submission_status(idea_id: str, status: str, db: Session = Depends(get_db)):
+    """Update the status of a submission."""
+    s = db.query(IdeaSubmission).filter(IdeaSubmission.idea_id == idea_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    s.status = status
+    db.commit()
+    return {"detail": "status updated", "status": status}
+
+
+@router.delete("/{idea_id}")
+async def delete_submission(idea_id: str, db: Session = Depends(get_db)):
+    """Delete a submission."""
+    s = db.query(IdeaSubmission).filter(IdeaSubmission.idea_id == idea_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    db.delete(s)
+    db.commit()
+    return {"detail": "deleted"}
