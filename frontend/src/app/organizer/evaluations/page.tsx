@@ -30,7 +30,7 @@ export default function OrganizerEvaluations() {
         <div className="flex-grow space-y-12 xl:max-w-[1000px]">
           {/* Section Header */}
           <div>
-            <h3 className="font-display-lg text-[48px] serif-text text-primary leading-tight">Evaluation Intelligence</h3>
+            <h3 className="font-display-lg text-[48px] serif-text text-primary leading-tight">Evaluation Intelligence T</h3>
             <p className="font-body-lg text-[18px] text-on-surface-variant mt-2 max-w-2xl">A holistic view of the judging ecosystem for the Winter 2024 Cycle. Monitor progress, review scores, and finalize rankings across 112 competing teams.</p>
           </div>
 

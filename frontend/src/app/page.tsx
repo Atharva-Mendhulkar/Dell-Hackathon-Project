@@ -154,6 +154,23 @@ export default function LandingPage() {
                 <span className="material-symbols-outlined text-4xl text-secondary mb-6">assignment_ind</span>
                 <h3 className="font-headline-sm text-[24px] mb-3">Seamless Registration</h3>
                 <p className="text-on-surface-variant mb-12">Collect RSVPs, build teams, and manage dietary requirements through an editorial-style interface.</p>
+                <div className="space-y-2 mb-8">
+  <div className="flex items-center gap-2">
+    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+    <span className="text-sm">AI Skill Matching</span>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+    <span className="text-sm">Instant Team Formation</span>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+    <span className="text-sm">Verified Participants</span>
+  </div>
+</div>
+     
                 <div className="mt-auto pt-12 flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-white/50 border border-white flex items-center justify-center">
                     <span className="material-symbols-outlined text-secondary">verified</span>

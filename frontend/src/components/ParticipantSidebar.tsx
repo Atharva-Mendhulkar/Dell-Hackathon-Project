@@ -46,10 +46,6 @@ export default function ParticipantSidebar() {
       
       <div className="mt-auto px-2 pb-4">
         <div className="mt-stack-lg border-t border-white/10 pt-4 space-y-2">
-          <Link href="#" className="flex items-center gap-3 px-4 py-2 text-white/80 text-label-md hover:bg-white/10 rounded-xl transition-all">
-            <span className="material-symbols-outlined">settings</span>
-            Settings
-          </Link>
           <form action={signOut}>
             <button type="submit" className="w-full flex items-center gap-3 px-4 py-2 text-white/80 text-label-md hover:bg-white/10 rounded-xl transition-all">
               <span className="material-symbols-outlined">logout</span>

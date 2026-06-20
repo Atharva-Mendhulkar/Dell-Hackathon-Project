@@ -49,130 +49,11 @@ export default function HackathonReviewers() {
         </div>
       </section>
 
-      {/* Reviewer Highlights */}
-      <div className="mb-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-headline-sm text-[24px] font-bold flex items-center gap-3">
-            <span className="w-1 h-8 bg-primary rounded-full"></span>
-            Top Performing Reviewers
-          </h2>
-          <button className="text-primary text-[14px] font-medium flex items-center gap-1 hover:underline">
-            View Hall of Fame <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* High performer 1 */}
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-outline-variant/20 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined text-[80px]">auto_awesome</span>
-            </div>
-            <div className="flex items-start gap-4 mb-6 relative">
-              <div className="w-16 h-16 rounded-full border-2 border-primary-container p-1 shrink-0">
-                <img className="w-full h-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfa9Nt_O9S2h2tYkFRl52prv9pGVNcGRRB3ZItPEKT3DqJfOm4qF8eQ40-MkmCP5QaOssc1UVjLj1HKnOKPgvp_az3jHEdweNRzVXKLe-_lRuFJoahSg4TFrgCSSFCgxyM_SFaQ1iEvsyYTpjJuMUjUmqPuGAJcWhjiEJdQOmcpaB0E24_7P5e0b9tfLKJnsAIj8kCTOcIyAuoEwkIE_5WINSuGT4HeSAcJQ3oAstwCXnqxoTxOXaaHss_SBRsk4If6pHX6oJ951Q" alt="Reviewer" />
-              </div>
-              <div>
-                <h4 className="font-headline-sm text-[20px] font-bold">Dr. Aris Thorne</h4>
-                <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-md text-[11px] font-bold">AI/ML EXPERT</span>
-                <p className="text-on-surface-variant text-[13px] mt-1 font-medium">Summit University</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-6 relative">
-              <div className="p-3 bg-surface-container-low rounded-lg">
-                <p className="text-outline text-[11px] uppercase font-bold">Teams</p>
-                <p className="font-headline-sm text-[18px] font-bold">14</p>
-              </div>
-              <div className="p-3 bg-surface-container-low rounded-lg">
-                <p className="text-outline text-[11px] uppercase font-bold">Avg Score</p>
-                <p className="font-headline-sm text-[18px] font-bold">8.9</p>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="flex justify-between text-[12px] mb-1.5">
-                <span className="font-medium">Completion Rate</span>
-                <span className="font-bold text-primary">96%</span>
-              </div>
-              <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: "96%" }}></div>
-              </div>
-            </div>
-          </div>
-          {/* High performer 2 */}
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-outline-variant/20 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined text-[80px]">eco</span>
-            </div>
-            <div className="flex items-start gap-4 mb-6 relative">
-              <div className="w-16 h-16 rounded-full border-2 border-primary-container p-1 shrink-0">
-                <img className="w-full h-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWCAUgxZV5nq5QBqMrSrEmkNaz-pJGgWfuRaMu5ulz4R2jBjiCoc80pdluCXoLtHW6RtrJs5Zm7nP1f0IDWfL-ygVtYM_UhxIM94GVG4dGFilZ_NsGz1nTvJOugH03hYsyt_cEvl05a4gR7mPDCvwkjQywV3l5mqd9zPxot52tC2IEUfiVzA3itki-KxpsvVUsoe0eF2XqCJ4jyQHoJRfh6nFkW75AP7v_gqE4pdeCMCWkxTu98dtEj4JvU1jmbbOitPV0eAGeS40" alt="Reviewer" />
-              </div>
-              <div>
-                <h4 className="font-headline-sm text-[20px] font-bold">Sarah Jenkins</h4>
-                <span className="px-2 py-0.5 bg-secondary-container text-on-secondary-container rounded-md text-[11px] font-bold">SUSTAINABILITY</span>
-                <p className="text-on-surface-variant text-[13px] mt-1 font-medium">EcoVanguard</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-6 relative">
-              <div className="p-3 bg-surface-container-low rounded-lg">
-                <p className="text-outline text-[11px] uppercase font-bold">Teams</p>
-                <p className="font-headline-sm text-[18px] font-bold">12</p>
-              </div>
-              <div className="p-3 bg-surface-container-low rounded-lg">
-                <p className="text-outline text-[11px] uppercase font-bold">Avg Score</p>
-                <p className="font-headline-sm text-[18px] font-bold">9.2</p>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="flex justify-between text-[12px] mb-1.5">
-                <span className="font-medium">Completion Rate</span>
-                <span className="font-bold text-primary">100%</span>
-              </div>
-              <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: "100%" }}></div>
-              </div>
-            </div>
-          </div>
-          {/* High performer 3 */}
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-outline-variant/20 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined text-[80px]">code</span>
-            </div>
-            <div className="flex items-start gap-4 mb-6 relative">
-              <div className="w-16 h-16 rounded-full border-2 border-primary-container p-1 shrink-0">
-                <img className="w-full h-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCcJzCV3d12zKgUPi-0X1dS3IlT3CT5_BzlPL-yopGXEOERK8-iXjBmqDwwBapoK8Lawk2G5A5WvwcpWHnLJMgCBa5fDydfUAsO1f9hiDAdOa0PYNUYlmu4Zqh0neP_63dsNCVWo4K3ILoO3XPXrIZNOMhNsO1FsNHSH7z-e5DmkIpmBN_olOmTOYQnsnHGT35UB974i0gc1LkN_mH53wiBa5ZhBb-1noMUkX8eM7dcC2FIiWea7kUL3KJr7ngKPv0IRfpoJ1X2QJU" alt="Reviewer" />
-              </div>
-              <div>
-                <h4 className="font-headline-sm text-[20px] font-bold">Marc Vasseur</h4>
-                <span className="px-2 py-0.5 bg-tertiary-container text-on-tertiary-container rounded-md text-[11px] font-bold">FINTECH / WEB3</span>
-                <p className="text-on-surface-variant text-[13px] mt-1 font-medium">GreenTech Labs</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-6 relative">
-              <div className="p-3 bg-surface-container-low rounded-lg">
-                <p className="text-outline text-[11px] uppercase font-bold">Teams</p>
-                <p className="font-headline-sm text-[18px] font-bold">18</p>
-              </div>
-              <div className="p-3 bg-surface-container-low rounded-lg">
-                <p className="text-outline text-[11px] uppercase font-bold">Avg Score</p>
-                <p className="font-headline-sm text-[18px] font-bold">7.8</p>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="flex justify-between text-[12px] mb-1.5">
-                <span className="font-medium">Completion Rate</span>
-                <span className="font-bold text-primary">82%</span>
-              </div>
-              <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: "82%" }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Main Workspace: Table & Sidebar */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Table Section */}
-        <div className="flex-1 min-w-0">
+        <div className="w-full">
           <div className="bg-white rounded-xl shadow-sm border border-outline-variant/20 overflow-hidden">
             <div className="px-8 py-6 border-b border-outline-variant/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <h3 className="font-headline-sm text-[20px] font-bold">Reviewer Management</h3>
@@ -186,7 +67,7 @@ export default function HackathonReviewers() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[900px]">
+              <table className="w-full text-left min-w-[800px]">
                 <thead className="bg-surface-container-low/50 text-outline uppercase text-[11px] font-bold tracking-widest border-b border-outline-variant/20">
                   <tr>
                     <th className="px-8 py-4">Reviewer</th>
@@ -194,8 +75,7 @@ export default function HackathonReviewers() {
                     <th className="px-4 py-4 text-center">Assigned Teams</th>
                     <th className="px-4 py-4 text-center">Done</th>
                     <th className="px-4 py-4 text-center">Avg. Score</th>
-                    <th className="px-4 py-4">Workload</th>
-                    <th className="px-8 py-4 text-right">Actions</th>
+                    <th className="px-4 py-4 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/10">
@@ -216,19 +96,15 @@ export default function HackathonReviewers() {
                     <td className="px-4 py-5 text-center font-bold">10</td>
                     <td className="px-4 py-5 text-center text-primary font-bold">8</td>
                     <td className="px-4 py-5 text-center font-bold">8.4</td>
-                    <td className="px-4 py-5">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold">
-                        <span className="w-1 h-1 bg-green-600 rounded-full"></span> AVAILABLE
-                      </span>
-                    </td>
-                    <td className="px-8 py-5 text-right space-x-2">
+                    
+                    <td className="px-8 py-5 text-center ">
                       <button className="text-primary hover:text-primary/70 font-bold text-[12px] flex items-center gap-1 inline-flex"><span className="material-symbols-outlined text-[16px]">visibility</span>Teams</button>
                       <button className="text-primary hover:text-primary/70 font-bold text-[12px]">Assign</button>
                       <button className="text-outline hover:text-on-surface font-bold text-[12px]">View</button>
                     </td>
                   </tr>
                   <tr className="bg-surface-container-low/30">
-                    <td className="px-8 py-4" colSpan={7}>
+                    <td className="px-8 py-4" colSpan={6}>
                       <div className="grid grid-cols-3 gap-4 text-[12px]">
                         <div className="space-y-2">
                           <p className="font-bold text-outline uppercase text-[10px]">Team Name</p>
@@ -265,11 +141,7 @@ export default function HackathonReviewers() {
                     <td className="px-4 py-5 text-center font-bold">15</td>
                     <td className="px-4 py-5 text-center text-primary font-bold">14</td>
                     <td className="px-4 py-5 text-center font-bold">7.2</td>
-                    <td className="px-4 py-5">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-[10px] font-bold">
-                        <span className="w-1 h-1 bg-amber-600 rounded-full"></span> BUSY
-                      </span>
-                    </td>
+                    
                     <td className="px-8 py-5 text-right space-x-2">
                       <button className="text-primary hover:text-primary/70 font-bold text-[12px] flex items-center gap-1 inline-flex"><span className="material-symbols-outlined text-[16px]">visibility</span>Teams</button>
                       <button className="text-primary hover:text-primary/70 font-bold text-[12px]">Assign</button>
@@ -293,11 +165,7 @@ export default function HackathonReviewers() {
                     <td className="px-4 py-5 text-center font-bold">22</td>
                     <td className="px-4 py-5 text-center text-primary font-bold">12</td>
                     <td className="px-4 py-5 text-center font-bold">9.5</td>
-                    <td className="px-4 py-5">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-[10px] font-bold">
-                        <span className="w-1 h-1 bg-red-600 rounded-full"></span> OVERLOADED
-                      </span>
-                    </td>
+                    
                     <td className="px-8 py-5 text-right space-x-2">
                       <button className="text-primary hover:text-primary/70 font-bold text-[12px] flex items-center gap-1 inline-flex"><span className="material-symbols-outlined text-[16px]">visibility</span>Teams</button>
                       <button className="text-primary hover:text-primary/70 font-bold text-[12px]">Assign</button>
@@ -364,42 +232,7 @@ export default function HackathonReviewers() {
             </div>
           </div>
           {/* Strategic Insights */}
-          <div className="bg-surface-container-low p-6 rounded-xl border border-outline-variant/30 flex-1">
-            <h4 className="font-headline-sm text-[18px] font-bold mb-6 flex items-center gap-2 text-primary">
-              <span className="material-symbols-outlined">lightbulb</span> Strategic Insights
-            </h4>
-            <div className="space-y-6">
-              <div>
-                <p className="text-[11px] font-bold text-outline uppercase mb-3">Overloaded (Priority)</p>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between bg-white/60 p-2 rounded border border-outline-variant/10">
-                    <span className="text-[12px] font-bold">Marcus K.</span>
-                    <span className="text-[11px] font-bold text-red-600">12 Teams</span>
-                  </div>
-                  <div className="flex items-center justify-between bg-white/60 p-2 rounded border border-outline-variant/10">
-                    <span className="text-[12px] font-bold">Amara O.</span>
-                    <span className="text-[11px] font-bold text-red-600">22 Teams</span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-outline uppercase mb-3">System Status</p>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[12px] font-bold">Unassigned Teams</span>
-                  <span className="px-2 py-0.5 bg-secondary text-on-secondary rounded text-[10px] font-bold">8</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-bold">Reviews Due Soon (24h)</span>
-                  <span className="px-2 py-0.5 bg-primary text-on-primary rounded text-[10px] font-bold">14</span>
-                </div>
-              </div>
-              <div className="pt-4 border-t border-outline-variant/20">
-                <button className="w-full py-2.5 bg-white border border-primary text-primary rounded-lg text-[14px] font-bold hover:bg-primary hover:text-on-primary transition-all flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">auto_fix_high</span> Auto-Balance Workload
-                </button>
-              </div>
-            </div>
-          </div>
+          
         </aside>
       </div>
     </div>
