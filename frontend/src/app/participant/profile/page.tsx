@@ -20,7 +20,7 @@ export default async function ParticipantProfile() {
   const { data: profile } = await supabase
     .from("participants")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .single();
 
   if (!profile) {

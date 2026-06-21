@@ -35,151 +35,55 @@ export async function submitRegistration(payload: SubmitRegistrationPayload) {
     return { success: false, error: 'Unauthorized' }
   }
 
-  // 1. Generate Intelligence Decision
-  // We mock exactSignals and similarity based on the PRD for this participant
-  const intelligencePayload: RegistrationCase = {
-    id: 'pending',
-    name: payload.name,
-    email: payload.email,
-    college: payload.college,
-    github: payload.github,
-    submittedAt: new Date().toISOString(),
-    decision: 'AUTO_APPROVED',
-    score: 0,
-    matchedProfile: 'No close match',
-    matchedProfileNote: 'Pending deterministic duplicate scan.',
-    initials: payload.name
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .substring(0, 2)
-      .toUpperCase(),
-    skills: payload.skills || [],
-    exactSignals: {
-      email: false,
-      phone: false,
-      github: false,
-    },
-    similarity: {
-      name: Math.random() * 0.3, // Mock low similarity
-      college: Math.random() * 0.3,
-    },
-    deviceMatch: false,
-    ipSubnetMatch: false,
-    faceScan: {
-      status: payload.faceScanStatus ?? 'verified',
-      score: payload.faceScanScore ?? 0.95,
-      consented: payload.faceScanConsented ?? true,
-      dataDeletedAt: new Date().toISOString(),
-    },
-    recommendation: 'Pending deterministic duplicate scan.',
-  }
+  // Call the new FastAPI endpoint for duplicate detection and registration persistence
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  let decision = 'MANUAL_REVIEW';
+  let registrationId = null;
 
-  const decision = getDecisionForRegistration(intelligencePayload)
-  const score = computeWeightedScore(intelligencePayload)
+  try {
+    const res = await fetch(`${apiUrl}/organizer/registrations/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        user_id: user.id,
+        name: payload.name,
+        email: payload.email,
+        college: payload.college,
+        degree: payload.degree,
+        github: payload.github,
+        gender: payload.gender,
+        phone: payload.phone,
+        skills: payload.skills || []
+      })
+    });
 
-  // 2. Persist to Supabase Registrations
-  let registrationId = crypto.randomUUID()
-  const dbPayload = {
-    id: registrationId,
-    user_id: user.id,
-    name: payload.name,
-    email: payload.email,
-    college: payload.college,
-    degree: payload.degree,
-    github: payload.github,
-    gender: payload.gender,
-    phone: payload.phone,
-    skills: payload.skills || [],
-    
-    decision: decision,
-    score: score,
-    
-    exact_email: false,
-    exact_phone: false,
-    exact_github: false,
-    
-    sim_name: intelligencePayload.similarity.name,
-    sim_college: intelligencePayload.similarity.college,
-    
-    device_match: false,
-    ip_subnet_match: false,
-    
-    face_scan_status: intelligencePayload.faceScan.status,
-    face_scan_score: intelligencePayload.faceScan.score,
-    face_scan_consented: intelligencePayload.faceScan.consented,
-    
-    recommendation: `Server generated decision: ${decision}`
-  }
-
-  // Check if they already have a registration
-  const { data: existingReg } = await supabase.from('registrations').select('id, decision').eq('user_id', user.id).single()
-
-  if (existingReg) {
-    registrationId = existingReg.id
-    // If they already have a registration, we just update the decision and score
-    await supabase.from('registrations').update({
-      skills: payload.skills || [],
-      decision: decision,
-      score: score,
-    }).eq('id', registrationId)
-  } else {
-    console.log("Attempting to insert registration:", dbPayload);
-    const { error: regError } = await supabase.from('registrations').insert(dbPayload)
-
-    if (regError) {
-      console.error('Registration insertion failed (RLS or DB Error):', regError)
-      return { success: false, error: regError.message }
-    }
-    console.log("Registration inserted successfully.");
-  }
-
-  // 3. If AUTO_APPROVED, create Participant Record
-  if (decision === 'AUTO_APPROVED') {
-    const participantPayload = {
-      user_id: user.id,
-      registration_id: registrationId,
-      name: payload.name,
-      email: payload.email,
-      college_name: payload.college,
-      degree: payload.degree,
-      github_url: payload.github,
-      gender: payload.gender,
-      phone: payload.phone,
-      declared_skills: payload.skills || [],
-      skill_vector: payload.raw_text ? { status: "processing" } : (payload.skill_vector || {}),
-      status: 'approved'
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('FastAPI registration submit failed:', errorText);
+      return { success: false, error: 'Backend validation failed' };
     }
 
-    // Check if participant exists
-    const { data: existingPart } = await supabase.from('participants').select('id').eq('user_id', user.id).single()
+    const data = await res.json();
+    decision = data.decision;
+    registrationId = data.registration_id;
+  } catch (error) {
+    console.error('Failed to reach FastAPI backend:', error);
+    return { success: false, error: 'Backend unreachable' };
+  }
 
-    if (existingPart) {
-      await supabase.from('participants').update({
-        declared_skills: payload.skills || [],
-        skill_vector: payload.raw_text ? { status: "processing" } : (payload.skill_vector || {}),
-        status: 'approved'
-      }).eq('user_id', user.id)
-    } else {
-      const { error: partError } = await supabase.from('participants').insert(participantPayload)
-      if (partError) {
-        console.error('Participant creation failed:', partError)
-        return { success: false, error: 'Failed to create participant profile: ' + partError.message }
-      }
-    }
-    
-    if (payload.raw_text) {
-      // Trigger background LLM parsing, await it to prevent Next.js from cancelling it
-      try {
-        const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/participants/process_resume_background`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: user.id, raw_text: payload.raw_text })
-        });
-        if (!r.ok) console.error("Background LLM trigger returned:", r.status);
-      } catch (e) {
-        console.error("Background LLM trigger failed:", e);
-      }
+  // 2. If AUTO_APPROVED, trigger Background AI Task
+  if (decision === 'AUTO_APPROVED' && payload.raw_text) {
+    try {
+      const r = await fetch(`${apiUrl}/participants/process_resume_background`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id, raw_text: payload.raw_text })
+      });
+      if (!r.ok) console.error("Background LLM trigger returned:", r.status);
+    } catch (e) {
+      console.error("Background LLM trigger failed:", e);
     }
   }
 
@@ -303,7 +207,7 @@ export async function createDirectProfile(payload: SubmitRegistrationPayload) {
     status: 'approved'
   }
 
-  const { data: existingPart } = await supabase.from('participants').select('id').eq('user_id', user.id).single()
+  const { data: existingPart } = await supabase.from('participants').select('id').eq('id', user.id).single()
 
   if (existingPart) {
     const { error: partUpdateError } = await supabase.from('participants').update({
@@ -317,7 +221,7 @@ export async function createDirectProfile(payload: SubmitRegistrationPayload) {
       declared_skills: participantPayload.declared_skills,
       skill_vector: participantPayload.skill_vector,
       status: participantPayload.status
-    }).eq('user_id', user.id)
+    }).eq('id', user.id)
     if (partUpdateError) {
       console.error("Direct participant update failed:", partUpdateError);
       return { success: false, error: partUpdateError.message }

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useOnboardingStore } from "@/store/useOnboardingStore";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 
 const MOCK_PARTICIPANTS = [
   {
@@ -50,6 +51,38 @@ function calculateRecruitMatch(participantVector: Record<string, number>, requir
 export default function CreateTeam() {
   const [teamSize, setTeamSize] = useState(4);
   const [activeTab, setActiveTab] = useState("Invite Friends");
+  const [teamName, setTeamName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const router = useRouter();
+
+  const handleCreateTeam = async () => {
+    try {
+      setIsCreating(true);
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const payload = {
+        name: teamName || "Unnamed Team",
+        member_ids: session?.user?.id ? [session.user.id] : []
+      };
+
+      const res = await fetch("http://localhost:8000/teams/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        router.push("/participant/teams/workspace");
+      } else {
+        console.error("Failed to create team");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const sortedRecruits = [...MOCK_PARTICIPANTS].map(p => ({
     ...p,
@@ -74,7 +107,13 @@ export default function CreateTeam() {
               <div className="space-y-6">
                 <div className="space-y-2">
                   <label className="font-label-md text-label-md text-on-surface-variant">Team Name</label>
-                  <input className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 focus:ring-2 focus:ring-tertiary focus:border-transparent outline-none transition-all font-body-md" placeholder="e.g. Project Verdant" type="text" />
+                  <input 
+                    value={teamName}
+                    onChange={(e) => setTeamName(e.target.value)}
+                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 focus:ring-2 focus:ring-tertiary focus:border-transparent outline-none transition-all font-body-md" 
+                    placeholder="e.g. Project Verdant" 
+                    type="text" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="font-label-md text-label-md text-on-surface-variant">Team Description</label>
@@ -293,11 +332,13 @@ export default function CreateTeam() {
             <button className="flex-1 md:flex-none px-6 py-2.5 rounded-lg bg-primary-container/20 text-on-primary-container font-label-md font-bold hover:bg-primary-container/40 transition-colors">
               Invite Participants
             </button>
-            <Link href="/participant/teams/workspace">
-              <button className="flex-1 md:flex-none px-8 py-2.5 rounded-lg bg-primary text-white font-label-md font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                Create Team
-              </button>
-            </Link>
+            <button 
+              onClick={handleCreateTeam}
+              disabled={isCreating}
+              className="flex-1 md:flex-none px-8 py-2.5 rounded-lg bg-primary text-white font-label-md font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {isCreating ? "Creating..." : "Create Team"}
+            </button>
           </div>
         </div>
       </div>

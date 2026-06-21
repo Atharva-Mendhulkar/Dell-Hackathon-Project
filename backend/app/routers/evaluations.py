@@ -10,6 +10,11 @@ from ..database import execute, fetch_all
 from ..deps import get_db
 from ..models.evaluation import Evaluation
 
+try:
+    from app.services.audit_service import log_event
+except ImportError:
+    def log_event(*args, **kwargs): pass
+
 router = APIRouter()
 
 class EvaluationSubmitRequest(BaseModel):
@@ -24,7 +29,7 @@ class BiasReportResponse(BaseModel):
     alerts: List[dict]
 
 @router.post("/submit")
-async def submit_evaluation(request: EvaluationSubmitRequest):
+async def submit_evaluation(request: EvaluationSubmitRequest, db: Session = Depends(get_db)):
     """
     Submits a new evaluation score and triggers the background bias detection task.
     """
@@ -45,6 +50,16 @@ async def submit_evaluation(request: EvaluationSubmitRequest):
         ))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to submit evaluation: {str(e)}")
+
+    try:
+        log_event(
+            db=db,
+            event_type="evaluation_submitted",
+            payload={"evaluation_id": eval_id, "score": request.score, "reviewer_id": request.reviewer_id, "idea_id": request.idea_id},
+            user_id=request.reviewer_id
+        )
+    except Exception as e:
+        print(f"Failed to log event: {e}")
 
     return {"status": "success", "evaluation_id": eval_id}
 
@@ -112,6 +127,17 @@ async def create_evaluation(data: EvaluationCreate, db: Session = Depends(get_db
     db.add(evaluation)
     db.commit()
     db.refresh(evaluation)
+    
+    try:
+        log_event(
+            db=db,
+            event_type="evaluation_created",
+            payload={"evaluation_id": str(evaluation.evaluation_id), "score": data.score},
+            user_id=data.reviewer_id
+        )
+    except Exception as e:
+        print(f"Failed to log event: {e}")
+        
     return evaluation
 
 
@@ -148,10 +174,20 @@ from app.services.ai.pipelines.feedback.nlg import generate_team_feedback
 from sqlalchemy import func
 
 @router.post("/compute-results/{hackathon_id}")
-async def compute_results(hackathon_id: str):
+async def compute_results(hackathon_id: str, db: Session = Depends(get_db)):
     """Computes final results and triggers NLG feedback generation for all teams in the background."""
     from app.tasks.evaluation_tasks import compute_results_task
     task = compute_results_task.delay(hackathon_id)
+    try:
+        log_event(
+            db=db,
+            event_type="results_computation_triggered",
+            payload={"hackathon_id": hackathon_id, "task_id": task.id},
+            user_id="organizer"
+        )
+    except Exception as e:
+        print(f"Failed to log event: {e}")
+
     return {
         "status": "queued",
         "message": "Result computation and feedback generation started",

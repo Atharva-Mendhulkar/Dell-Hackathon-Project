@@ -76,22 +76,17 @@ export default function Step4Phone() {
             onSubmit={handleSendOTP} 
             className="space-y-6"
           >
-            <div className="relative group flex">
-              <div className="w-20 bg-surface-container-low border border-r-0 border-outline-variant/30 rounded-l-2xl flex items-center justify-center font-bold text-on-surface-variant">
-                +91
-              </div>
-              <div className="relative flex-1">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/50 group-focus-within:text-primary transition-colors" />
-                <input 
-                  type="tel" 
-                  placeholder="Phone Number" 
-                  value={localPhone}
-                  onChange={(e) => setLocalPhone(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-surface-container-low border border-outline-variant/30 rounded-r-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-[18px] font-medium"
-                  autoFocus
-                  disabled={otpState === "sending"}
-                />
-              </div>
+            <div className="relative group">
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/50 group-focus-within:text-primary transition-colors" />
+              <input 
+                type="tel" 
+                placeholder="Phone Number" 
+                value={localPhone}
+                onChange={(e) => setLocalPhone(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-surface-container-low border border-outline-variant/30 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-[18px] font-medium"
+                autoFocus
+                disabled={otpState === "sending"}
+              />
             </div>
 
             <button 
@@ -151,7 +146,7 @@ export default function Step4Phone() {
               )}
               {otpState === "sent" && (
                 <p className="text-[13px] text-on-surface-variant font-medium">
-                  Code sent to <span className="text-on-surface font-bold">+1 {localPhone}</span>
+                  Code sent to <span className="text-on-surface font-bold">{localPhone}</span>
                 </p>
               )}
             </div>

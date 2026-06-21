@@ -52,9 +52,26 @@ export default function CreateHackathonStep2() {
       return;
     }
     
-    // MOCKED FOR MVP: Normally we'd POST to /problem-statements here
-    // but the backend schema for Hackathon relations is currently simplified.
-    router.push("/organizer/hackathons/create/step-3");
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      // POST all problem statements to backend
+      for (const ps of problemStatements) {
+        await fetch(`${apiUrl}/problem-statements/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: ps.title,
+            raw_text: ps.description,
+            min_size: 2,
+            max_size: 4
+          })
+        });
+      }
+      router.push("/organizer/hackathons/create/step-3");
+    } catch (e) {
+      console.error("Failed to save problem statements:", e);
+      alert("Failed to save problem statements");
+    }
   };
 
   return (

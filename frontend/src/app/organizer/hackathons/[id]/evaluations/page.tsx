@@ -6,9 +6,23 @@ export default function HackathonEvaluations() {
       {/* Center Column (Main Dashboard Content) */}
       <div className="w-full space-y-12">
         {/* Section Header */}
-        <div>
-          <h3 className="font-headline-md text-[48px] font-bold text-primary leading-tight">Evaluation Intelligence</h3>
-          <p className="text-[18px] text-on-surface-variant mt-2 max-w-2xl font-medium">Track review progress, team scores, and judging insights across all submissions.</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="font-headline-md text-[48px] font-bold text-primary leading-tight">Evaluation Intelligence</h3>
+            <p className="text-[18px] text-on-surface-variant mt-2 max-w-2xl font-medium">Track review progress, team scores, and judging insights across all submissions.</p>
+          </div>
+          <button 
+            onClick={async () => {
+              const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+              const pathParts = window.location.pathname.split('/');
+              const hackathonId = pathParts[3] || "mock-hackathon";
+              await fetch(`${apiUrl}/evaluations/compute-results/${hackathonId}`, { method: "POST" });
+              alert("Result computation task queued!");
+            }}
+            className="bg-primary text-white px-6 py-3 rounded-xl font-bold font-label-md hover:bg-primary/90 transition-colors shadow-md"
+          >
+            Compute Final Results
+          </button>
         </div>
 
         {/* Top Metrics Row */}

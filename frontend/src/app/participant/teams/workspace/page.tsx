@@ -5,6 +5,36 @@ import { useEffect, useState } from "react";
 
 export default function TeamWorkspace() {
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+  const [projectTitle, setProjectTitle] = useState("EcoStream Hackathon Project");
+  const [projectDescription, setProjectDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmission = async () => {
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        team_id: "demo-team-id", // Mock team ID for demo
+        title: projectTitle,
+        description: projectDescription
+      };
+
+      const res = await fetch("http://localhost:8000/submissions/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        alert("Project submitted successfully!");
+      } else {
+        alert("Failed to submit project.");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     // Attempt to fetch submissions and see if any have AI feedback generated
@@ -147,6 +177,8 @@ export default function TeamWorkspace() {
   </div>
 
   <textarea
+    value={projectDescription}
+    onChange={(e) => setProjectDescription(e.target.value)}
     placeholder="Describe your project idea, solution approach, innovation, and expected impact..."
     className="w-full min-h-[220px] bg-[#fffaf6] border-2 border-primary/20 rounded-2xl p-6 text-body-md text-on-surface placeholder:text-outline outline-none resize-none shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
   />
@@ -178,8 +210,12 @@ export default function TeamWorkspace() {
                   <p className="text-label-sm text-on-surface-variant">Max file size 25MB. Final version required for judging.</p>
                 </div>
               </div>
-              <button className="w-full bg-primary text-on-primary py-5 rounded-2xl font-headline-sm text-[24px] shadow-lg hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-3">
-                Submit Project Finalization
+              <button 
+                onClick={handleSubmission}
+                disabled={isSubmitting}
+                className="w-full bg-primary text-on-primary py-5 rounded-2xl font-headline-sm text-[24px] shadow-lg hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                {isSubmitting ? "Submitting..." : "Submit Project Finalization"}
                 <span className="material-symbols-outlined">rocket_launch</span>
               </button>
             </section>

@@ -54,9 +54,18 @@ export default function CreateHackathonStep3() {
       return;
     }
     
-    // MOCKED FOR MVP: Normally we'd PUT to /rubric here
-    // but the backend schema for Hackathon relations is currently simplified.
-    router.push("/organizer/hackathons/create/step-4");
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      await fetch(`${apiUrl}/problem-statements/rubrics`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rubrics })
+      });
+      router.push("/organizer/hackathons/create/step-4");
+    } catch (e) {
+      console.error("Failed to save rubrics:", e);
+      alert("Failed to save rubrics");
+    }
   };
 
   return (

@@ -25,7 +25,9 @@ def setup_exception_handlers(app):
     @app.exception_handler(Exception)
     async def generic_exception_handler(request: Request, exc: Exception):
         logger.error(f"Unhandled Exception: {str(exc)} - Path: {request.url.path}", exc_info=True)
+        import traceback
+        traceback.print_exc()
         return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": "An unexpected error occurred.", "code": 500},
+            status_code=500,
+            content={"error": f"An unexpected error occurred: {str(exc)}", "code": 500},
         )

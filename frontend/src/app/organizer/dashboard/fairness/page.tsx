@@ -2,37 +2,29 @@
 
 import Link from "next/link";
 
-const MOCK_BIAS_ALERTS = [
-  {
-    id: "b1",
-    type: "GENDER_BIAS",
-    severity: "high",
-    title: "Significant Gender Scoring Discrepancy",
-    description: "Mann-Whitney U test indicates a statistically significant difference (p=0.012) in scores between male-majority and female-majority teams in the 'Urban Tech' track.",
-    metric: "p = 0.012",
-    actionRequired: "Review track #4 scores manually."
-  },
-  {
-    id: "b2",
-    type: "REVIEWER_OUTLIER",
-    severity: "medium",
-    title: "Consistently Harsh Scoring",
-    description: "Reviewer Dr. Sarah Jenkins is scoring 2.1 standard deviations below the mean for the 'Blockchain' category.",
-    metric: "z = -2.1",
-    actionRequired: "Trigger recalibration or normalize scores."
-  },
-  {
-    id: "b3",
-    type: "INSTITUTION_BIAS",
-    severity: "low",
-    title: "Slight Institutional Advantage",
-    description: "Teams with members from 'Stanford University' are scoring marginally higher on average, but within acceptable variance (p=0.08).",
-    metric: "p = 0.08",
-    actionRequired: "Monitor for continuing trends."
-  }
-];
+import { useEffect, useState } from "react";
 
 export default function FairnessDashboard() {
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const res = await fetch(`${apiUrl}/fairness/alerts`);
+        if (res.ok) {
+          const data = await res.json();
+          setAlerts(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch fairness alerts", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
   return (
     <div className="p-6 h-[calc(100vh-64px)] max-w-[1280px] mx-auto flex flex-col gap-6 overflow-y-auto">
       {/* Header */}
@@ -51,7 +43,13 @@ export default function FairnessDashboard() {
             Real-time statistical analysis of scoring distribution using SciPy (Mann-Whitney U, Kruskal-Wallis, Z-scores).
           </p>
         </div>
-        <button className="bg-primary-container text-on-primary-container px-6 py-2.5 rounded-xl font-label-md hover:bg-primary-container/80 transition-all flex items-center gap-2">
+        <button 
+          onClick={async () => {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+            await fetch(`${apiUrl}/fairness/run/mock-round-1`, { method: "POST" });
+            alert("Recalibration task queued!");
+          }}
+          className="bg-primary-container text-on-primary-container px-6 py-2.5 rounded-xl font-label-md hover:bg-primary-container/80 transition-all flex items-center gap-2">
           <span className="material-symbols-outlined text-[20px]">refresh</span>
           Run Recalibration
         </button>
@@ -104,33 +102,37 @@ export default function FairnessDashboard() {
         <div className="lg:col-span-8 space-y-6">
           <h3 className="font-headline-sm text-[24px] text-on-surface mb-4">Statistical Bias Alerts</h3>
           <div className="space-y-4">
-            {MOCK_BIAS_ALERTS.map(alert => (
+            {loading ? (
+              <p>Loading alerts...</p>
+            ) : alerts.length === 0 ? (
+              <p className="text-on-surface-variant">No statistical bias alerts found.</p>
+            ) : alerts.map(alert => (
               <div key={alert.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-sm ${
-                alert.severity === 'high' ? 'border-l-error' : 
-                alert.severity === 'medium' ? 'border-l-secondary' : 'border-l-tertiary'
+                alert.severity === 'HIGH' ? 'border-l-error' : 
+                alert.severity === 'MEDIUM' ? 'border-l-secondary' : 'border-l-tertiary'
               }`}>
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
                     <span className={`material-symbols-outlined p-2 rounded-xl ${
-                      alert.severity === 'high' ? 'bg-error-container text-error' : 
-                      alert.severity === 'medium' ? 'bg-secondary-container text-secondary' : 'bg-tertiary-container text-tertiary'
+                      alert.severity === 'HIGH' ? 'bg-error-container text-error' : 
+                      alert.severity === 'MEDIUM' ? 'bg-secondary-container text-secondary' : 'bg-tertiary-container text-tertiary'
                     }`}>
-                      {alert.type === 'GENDER_BIAS' ? 'wc' : alert.type === 'REVIEWER_OUTLIER' ? 'person_off' : 'account_balance'}
+                      {alert.bias_type === 'GENDER_BIAS' ? 'wc' : alert.bias_type === 'REVIEWER_OUTLIER' ? 'person_off' : 'account_balance'}
                     </span>
                     <div>
-                      <h4 className="font-headline-sm text-[20px]">{alert.title}</h4>
-                      <p className="text-[12px] uppercase tracking-wider text-outline font-bold mt-1">{alert.type.replace('_', ' ')}</p>
+                      <h4 className="font-headline-sm text-[20px]">{alert.bias_type.replace('_', ' ')} Detected</h4>
+                      <p className="text-[12px] uppercase tracking-wider text-outline font-bold mt-1">P-Value: {alert.p_value?.toFixed(4) || "N/A"}</p>
                     </div>
                   </div>
                   <div className="bg-surface-variant px-3 py-1 rounded-lg">
-                    <span className="font-mono text-sm font-bold text-on-surface">{alert.metric}</span>
+                    <span className="font-mono text-sm font-bold text-on-surface">{alert.severity}</span>
                   </div>
                 </div>
-                <p className="text-body-md text-on-surface-variant leading-relaxed mb-6">{alert.description}</p>
+                <p className="text-body-md text-on-surface-variant leading-relaxed mb-6">{alert.description || "Statistical anomaly detected in scoring distribution."}</p>
                 <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/50 flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-outline text-[18px]">engineering</span>
-                    <span className="font-label-md text-on-surface">{alert.actionRequired}</span>
+                    <span className="font-label-md text-on-surface">Review recommended</span>
                   </div>
                   <button className="bg-surface-container-high hover:bg-surface-container-highest px-4 py-2 rounded-lg font-label-md text-on-surface transition-colors">
                     Take Action

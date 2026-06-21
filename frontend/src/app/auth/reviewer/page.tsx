@@ -151,6 +151,7 @@ export default function ReviewerDashboard() {
   // rubricId -> score
   const [rubricScores, setRubricScores] = useState<Record<string, number>>({});
   const [commentInput, setCommentInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedSubmission = MOCK_SUBMISSIONS.find((s) => s.id === selectedSubmissionId) || null;
 
@@ -180,10 +181,36 @@ export default function ReviewerDashboard() {
     setRubricScores((prev) => ({ ...prev, [rubricId]: value }));
   };
 
-  const handleSubmitReview = () => {
-    // TODO: wire to a real server action, e.g.
-    // submitReview({ submissionId: selectedSubmission.id, rubricScores, totalScore, comment: commentInput })
-    alert(`Review submitted — Overall Score: ${totalScore}/100`);
+  const handleSubmitReview = async () => {
+    if (!selectedSubmission) return;
+    try {
+      setIsSubmitting(true);
+      const payload = {
+        assignment_id: "demo-assignment-id",
+        reviewer_id: "demo-reviewer-id",
+        idea_id: selectedSubmission.id,
+        score: totalScore,
+        feedback: commentInput
+      };
+
+      const res = await fetch("http://localhost:8000/evaluations/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        alert(`Review submitted — Overall Score: ${totalScore}/100`);
+        backToSubmissions();
+      } else {
+        alert("Failed to submit review");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error submitting review");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -493,11 +520,12 @@ export default function ReviewerDashboard() {
                       className="w-full mb-6 px-4 py-3 rounded-xl bg-white/70 border border-white/50 text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-on-secondary-container/30 resize-none"
                     />
 
-                    <button
+                    <button 
                       onClick={handleSubmitReview}
-                      className="cursor-pointer w-full bg-on-secondary-container text-white px-6 py-3.5 rounded-xl font-bold text-[15px] hover:opacity-90 transition-all duration-300 shadow-sm hover:shadow-lg transform hover:-translate-y-0.5"
+                      disabled={isSubmitting}
+                      className="px-6 py-2.5 bg-primary text-white font-bold rounded-full hover:bg-primary/90 transition-all shadow-md active:scale-95 disabled:opacity-50"
                     >
-                      Submit Review
+                      {isSubmitting ? "Submitting..." : "Submit Review"}
                     </button>
                   </div>
                 </div>

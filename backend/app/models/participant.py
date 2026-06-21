@@ -20,3 +20,7 @@ class Participant(Base):
     duplication_score = Column(Float, nullable=True)
     gender = Column(Text, nullable=True)
     location = Column(Text, nullable=True)
+    degree = Column(Text, nullable=True)
+    phone = Column(Text, nullable=True)
+    email = Column(Text, nullable=True)
+    status = Column(Text, nullable=True)

@@ -20,7 +20,7 @@ class ProblemStatementCreate(BaseModel):
     max_size: Optional[int] = 4
 
 class ProblemStatementOut(BaseModel):
-    ps_id: str
+    ps_id: uuid.UUID
     title: Optional[str] = None
     raw_text: Optional[str] = None
     required_vector: Optional[dict] = None
@@ -85,4 +85,11 @@ async def delete_problem_statement(ps_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Problem Statement not found")
     db.delete(ps)
     db.commit()
-    return {"detail": "deleted"}
+
+    return {"status": "success", "ps_id": str(ps.id)}
+
+@router.post("/rubrics")
+async def save_rubrics(data: dict):
+    """Mock endpoint to save rubrics for MVP."""
+    print("Saving rubrics:", data)
+    return {"status": "success"}

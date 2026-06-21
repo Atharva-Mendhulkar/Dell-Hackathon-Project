@@ -9,6 +9,11 @@ from ..deps import get_db
 from ..models.team import Team
 from ..models.participant import Participant
 
+try:
+    from app.services.audit_service import log_event
+except ImportError:
+    def log_event(*args, **kwargs): pass
+
 router = APIRouter()
 
 
@@ -53,6 +58,16 @@ async def create_team(data: TeamCreate, db: Session = Depends(get_db)):
             p.team_id = team.team_id
     db.commit()
 
+    try:
+        log_event(
+            db=db,
+            event_type="team_created",
+            payload={"team_id": str(team.team_id), "name": team.name},
+            user_id="system"
+        )
+    except Exception as e:
+        print(f"Failed to log event: {e}")
+
     return team
 
 
@@ -91,6 +106,16 @@ async def add_member(team_id: str, data: AddMemberRequest, db: Session = Depends
         p.team_id = t.team_id
 
     db.commit()
+
+    try:
+        log_event(
+            db=db,
+            event_type="team_member_added",
+            payload={"team_id": str(t.team_id), "participant_id": data.participant_id},
+            user_id="system"
+        )
+    except Exception as e:
+        print(f"Failed to log event: {e}")
     db.refresh(t)
     return t
 
@@ -110,6 +135,16 @@ async def delete_team(team_id: str, db: Session = Depends(get_db)):
 
     db.delete(t)
     db.commit()
+
+    try:
+        log_event(
+            db=db,
+            event_type="team_deleted",
+            payload={"team_id": team_id},
+            user_id="system"
+        )
+    except Exception as e:
+        print(f"Failed to log event: {e}")
     return {"detail": "deleted"}
 
 
@@ -279,6 +314,20 @@ async def trigger_team_formation():
     """Triggers coverage-driven team assembly as a background Celery task."""
     from app.tasks.team_tasks import team_formation_task
     task = team_formation_task.delay()
+
+    try:
+        from ..deps import SessionLocal
+        db = SessionLocal()
+        log_event(
+            db=db,
+            event_type="team_formation_triggered",
+            payload={"task_id": task.id},
+            user_id="organizer"
+        )
+        db.close()
+    except Exception as e:
+        print(f"Failed to log event: {e}")
+
     return {
         "status": "formation_started",
         "message": "Teams are being formed in the background.",

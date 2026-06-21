@@ -1,131 +1,30 @@
-from typing import Any, Dict, List
+import os
+import re
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+participants_path = "backend/app/routers/participants.py"
+with open(participants_path, "r") as f:
+    content = f.read()
 
-from ..deps import get_db
-from ..models.participant import Participant
-from ..models.reviewer import Reviewer
-from ..models.team import Team
-from ..models.registration import Registration
-from ..models.idea_submission import IdeaSubmission
-from ..models.assignment import Assignment
+# Remove everything after the return ResumeAnalysisResponse(...) in upload_resume
+# which is around line 198
+pattern = r"(    return ResumeAnalysisResponse\(\n        parsed_resume=parsed\.dict\(\),\n        skill_vector=vector\.to_dict\(\),\n        semantic_embedding=embedding,\n        breakdown=breakdown,\n    \)).*?(?=class BackgroundResumePayload)"
+content = re.sub(pattern, r"\1\n\n", content, flags=re.DOTALL)
 
-router = APIRouter()
+# Also remove the approve/reject endpoints from participants.py
+pattern2 = r"(@router\.post\(\"/\{registration_id\}/approve\"\).*?)(?=from pydantic import BaseModel\n\nclass FaceScanRequest)"
+content = re.sub(pattern2, "", content, flags=re.DOTALL)
 
+with open(participants_path, "w") as f:
+    f.write(content)
 
-@router.get("/summary")
-async def organizer_summary(db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """High-level counts for the organizer dashboard."""
-    return {
-        "total_participants": db.query(Participant).count(),
-        "total_reviewers": db.query(Reviewer).count(),
-        "total_teams": db.query(Team).count(),
-        "total_registrations": db.query(Registration).count(),
-        "total_submissions": db.query(IdeaSubmission).count(),
-        "total_assignments": db.query(Assignment).count(),
-    }
+print("Patched participants.py")
 
+organizer_path = "backend/app/routers/organizer.py"
+with open(organizer_path, "r") as f:
+    org_content = f.read()
 
-@router.get("/participants")
-async def all_participants(db: Session = Depends(get_db)):
-    """Fetch all participants for the organizer dashboard."""
-    return [
-        {
-            "id": p.id,
-            "name": p.name,
-            "college_name": p.college_name,
-            "github_url": p.github_url,
-            "declared_skills": p.declared_skills,
-            "team_id": str(p.team_id) if p.team_id else None,
-        }
-        for p in db.query(Participant).all()
-    ]
-
-
-@router.get("/reviewers")
-async def all_reviewers(db: Session = Depends(get_db)):
-    """Fetch all reviewers for the organizer dashboard."""
-    return [
-        {
-            "reviewer_id": str(r.reviewer_id),
-            "name": r.name,
-            "primary_specialization": r.primary_specialization,
-            "current_load": r.current_load,
-        }
-        for r in db.query(Reviewer).all()
-    ]
-
-
-@router.get("/teams")
-async def all_teams(db: Session = Depends(get_db)):
-    """Fetch all teams for the organizer dashboard."""
-    return [
-        {
-            "team_id": str(t.team_id),
-            "name": t.name,
-            "member_ids": t.member_ids,
-        }
-        for t in db.query(Team).all()
-    ]
-
-
-@router.get("/registrations")
-async def all_registrations(db: Session = Depends(get_db)):
-    """Fetch all registrations for the organizer dashboard."""
-    return [
-        {
-            "id": str(r.id),
-            "name": r.name,
-            "email": r.email,
-            "college": r.college,
-            "decision": r.decision,
-            "score": r.score,
-            "recommendation": r.recommendation,
-        }
-        for r in db.query(Registration).all()
-    ]
-
-from fastapi import HTTPException
-from ..models.problem_statement import ProblemStatement
-from ..models.hackathon import Hackathon
-from app.services.ai.pipelines.promo.generator import generate_promotional_content
-from app.services.ai.pipelines.reporting.pitch_generator import generate_success_report
-
-@router.post("/generate-promo/{hackathon_id}")
-async def generate_promo_content(hackathon_id: str, db: Session = Depends(get_db)):
-    hackathon = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
-    if not hackathon:
-        raise HTTPException(status_code=404, detail="Hackathon not found")
-    
-    problem_statements = db.query(ProblemStatement).all()
-    
-    try:
-        content = generate_promotional_content(hackathon, problem_statements)
-        return content
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/generate-success-report/{hackathon_id}")
-async def generate_report(hackathon_id: str, db: Session = Depends(get_db)):
-    hackathon = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
-    if not hackathon:
-        raise HTTPException(status_code=404, detail="Hackathon not found")
-        
-    stats = {
-        "total_participants": db.query(Participant).count(),
-        "total_reviewers": db.query(Reviewer).count(),
-        "total_teams": db.query(Team).count(),
-        "total_registrations": db.query(Registration).count(),
-        "total_submissions": db.query(IdeaSubmission).count(),
-    }
-    
-    try:
-        report = generate_success_report(hackathon, stats)
-        return report
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+# Add endpoints to organizer.py
+new_code = """
 import rapidfuzz
 import uuid
 from pydantic import BaseModel
@@ -202,9 +101,6 @@ async def submit_registration(payload: SubmitRegistrationPayload, db: Session = 
             email=payload.email,
             college=payload.college,
             github=payload.github,
-            degree=payload.degree,
-            phone=payload.phone,
-            gender=payload.gender,
             skills=payload.skills,
             decision=decision,
             score=final_score,
@@ -225,10 +121,6 @@ async def submit_registration(payload: SubmitRegistrationPayload, db: Session = 
             p.name = payload.name
             p.college_name = payload.college
             p.github_url = payload.github
-            p.degree = payload.degree
-            p.phone = payload.phone
-            p.gender = payload.gender
-            p.email = payload.email
             p.declared_skills = payload.skills
             p.status = 'approved'
             db.commit()
@@ -238,12 +130,7 @@ async def submit_registration(payload: SubmitRegistrationPayload, db: Session = 
                 name=payload.name,
                 college_name=payload.college,
                 github_url=payload.github,
-                degree=payload.degree,
-                phone=payload.phone,
-                gender=payload.gender,
-                email=payload.email,
                 declared_skills=payload.skills,
-                status='approved',
             )
             db.add(p)
             db.commit()
@@ -258,7 +145,7 @@ async def submit_registration(payload: SubmitRegistrationPayload, db: Session = 
 @router.post("/registrations/{registration_id}/approve")
 async def approve_registration(registration_id: str, db: Session = Depends(get_db)):
     try:
-        from app.services.audit_service import log_event
+        from app.routers.audit import log_event
     except ImportError:
         def log_event(*args, **kwargs): pass
 
@@ -286,10 +173,11 @@ async def approve_registration(registration_id: str, db: Session = Depends(get_d
 
     try:
         log_event(
-            db=db,
-            event_type="registration_approved",
-            payload={"target": str(reg.id), "previous_decision": "MANUAL_REVIEW"},
-            user_id="organizer"
+            action="registration_approved",
+            actor="organizer",
+            target=str(reg.id),
+            details={"previous_decision": "MANUAL_REVIEW"},
+            db=db
         )
     except Exception as e:
         print(f"Failed to log event: {e}")
@@ -299,7 +187,7 @@ async def approve_registration(registration_id: str, db: Session = Depends(get_d
 @router.post("/registrations/{registration_id}/reject")
 async def reject_registration(registration_id: str, db: Session = Depends(get_db)):
     try:
-        from app.services.audit_service import log_event
+        from app.routers.audit import log_event
     except ImportError:
         def log_event(*args, **kwargs): pass
 
@@ -315,13 +203,20 @@ async def reject_registration(registration_id: str, db: Session = Depends(get_db
 
     try:
         log_event(
-            db=db,
-            event_type="registration_rejected",
-            payload={"target": str(reg.id), "reason": "Manual rejection"},
-            user_id="organizer"
+            action="registration_rejected",
+            actor="organizer",
+            target=str(reg.id),
+            details={"reason": "Manual rejection"},
+            db=db
         )
     except Exception as e:
         print(f"Failed to log event: {e}")
 
     return {"status": "rejected"}
 
+"""
+
+with open(organizer_path, "a") as f:
+    f.write(new_code)
+
+print("Patched organizer.py")

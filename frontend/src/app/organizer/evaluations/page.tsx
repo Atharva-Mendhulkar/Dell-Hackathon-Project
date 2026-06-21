@@ -4,6 +4,24 @@ import { useEffect, useState } from "react";
 
 export default function OrganizerEvaluations() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isComputing, setIsComputing] = useState(false);
+
+  const handleComputeResults = async () => {
+    try {
+      setIsComputing(true);
+      const res = await fetch(`http://localhost:8000/evaluations/compute-results/demo-hackathon-id`, { method: "POST" });
+      if (res.ok) {
+        alert("Result computation task queued successfully!");
+      } else {
+        alert("Failed to queue result computation.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error triggering computation");
+    } finally {
+      setIsComputing(false);
+    }
+  };
 
   useEffect(() => {
     // Micro-interactions
@@ -378,7 +396,13 @@ export default function OrganizerEvaluations() {
             <span className="material-symbols-outlined text-primary text-4xl mb-4">verified</span>
             <h5 className="font-headline-sm text-[24px] serif-text text-on-surface">Ready to Finalize?</h5>
             <p className="text-[14px] text-on-surface-variant mt-2 mb-6">Finalizing the leaderboard will notify all participants and lock evaluations for this cycle.</p>
-            <button className="w-full bg-on-surface text-surface py-4 rounded-full text-[14px] font-bold hover:bg-primary transition-colors">Publish Final Results</button>
+            <button 
+              onClick={handleComputeResults}
+              disabled={isComputing}
+              className="w-full bg-on-surface text-surface py-4 rounded-full text-[14px] font-bold hover:bg-primary transition-colors disabled:opacity-50"
+            >
+              {isComputing ? "Computing..." : "Publish Final Results"}
+            </button>
           </div>
         </aside>
       </div>
