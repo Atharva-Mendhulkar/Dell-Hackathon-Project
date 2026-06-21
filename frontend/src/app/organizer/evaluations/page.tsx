@@ -9,7 +9,8 @@ export default function OrganizerEvaluations() {
   const handleComputeResults = async () => {
     try {
       setIsComputing(true);
-      const res = await fetch(`http://localhost:8000/evaluations/compute-results/demo-hackathon-id`, { method: "POST" });
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/evaluations/compute-results/demo-hackathon-id`, { method: "POST" });
       if (res.ok) {
         alert("Result computation task queued successfully!");
       } else {

@@ -63,6 +63,17 @@ def get_latest_report(
     )
 
 
+@router.get("/reviewer_stats")
+def get_reviewer_stats(
+    db: Session = Depends(get_db)
+):
+    from app.models.reviewer_stats import ReviewerStats
+    return (
+        db.query(ReviewerStats)
+        .all()
+    )
+
+
 @router.get("/confidence")
 def get_confidence(
     db: Session = Depends(get_db)

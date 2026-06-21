@@ -83,15 +83,6 @@ def _coerce_parsed(data: dict, resume_text: str) -> ParsedResume:
     phone = str(data["phone"]) if data.get("phone") else None
     if phone:
         phone = phone.strip()
-        if phone.startswith("+91"):
-            phone = phone.replace("+91", "").strip("- ")
-        elif phone.startswith("+1"):
-            phone = phone.replace("+1", "").strip("- ")
-        elif phone.startswith("91") and len(phone) > 10:
-            phone = phone[2:].strip("- ")
-            
-        phone = f"+91 {phone}"
-            
     return ParsedResume(
         name=str(data["name"]) if data.get("name") else None,
         phone=phone,

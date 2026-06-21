@@ -6,19 +6,25 @@ import { useEffect, useState } from "react";
 
 export default function FairnessDashboard() {
   const [alerts, setAlerts] = useState<any[]>([]);
+  const [report, setReport] = useState<any>(null);
+  const [reviewerStats, setReviewerStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const res = await fetch(`${apiUrl}/fairness/alerts`);
-        if (res.ok) {
-          const data = await res.json();
-          setAlerts(data);
-        }
+        const [resAlerts, resReport, resStats] = await Promise.all([
+          fetch(`${apiUrl}/fairness/alerts`),
+          fetch(`${apiUrl}/fairness/report/latest`),
+          fetch(`${apiUrl}/fairness/reviewer_stats`)
+        ]);
+
+        if (resAlerts.ok) setAlerts(await resAlerts.json());
+        if (resReport.ok) setReport(await resReport.json());
+        if (resStats.ok) setReviewerStats(await resStats.json());
       } catch (e) {
-        console.error("Failed to fetch fairness alerts", e);
+        console.error("Failed to fetch fairness data", e);
       } finally {
         setLoading(false);
       }
@@ -61,7 +67,7 @@ export default function FairnessDashboard() {
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-500/10 rounded-full blur-xl group-hover:bg-green-500/20 transition-all"></div>
           <p className="text-label-sm uppercase tracking-widest text-on-surface-variant font-bold mb-2">Overall Equity Score</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-display-lg text-green-600">92</span>
+            <span className="text-4xl font-display-lg text-green-600">{report ? report.average_confidence.toFixed(1) : "92"}</span>
             <span className="text-body-md text-on-surface-variant">/ 100</span>
           </div>
           <p className="text-[12px] text-green-600 font-bold mt-2 flex items-center gap-1">
@@ -72,7 +78,7 @@ export default function FairnessDashboard() {
         <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/30 shadow-sm">
           <p className="text-label-sm uppercase tracking-widest text-on-surface-variant font-bold mb-2">Active Alerts</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-display-lg text-error">1</span>
+            <span className="text-4xl font-display-lg text-error">{report ? report.critical_alerts : alerts.filter(a => a.severity === 'HIGH').length}</span>
             <span className="text-body-md text-on-surface-variant">Critical</span>
           </div>
           <p className="text-[12px] text-error font-bold mt-2 flex items-center gap-1">
@@ -91,7 +97,7 @@ export default function FairnessDashboard() {
         <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/30 shadow-sm">
           <p className="text-label-sm uppercase tracking-widest text-on-surface-variant font-bold mb-2">Outlier Reviewers</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-display-lg text-secondary">2</span>
+            <span className="text-4xl font-display-lg text-secondary">{report ? report.flagged_reviewers : "0"}</span>
           </div>
           <p className="text-[12px] text-secondary font-bold mt-2">|Z-score| &gt; 2.0</p>
         </div>
@@ -117,10 +123,10 @@ export default function FairnessDashboard() {
                       alert.severity === 'HIGH' ? 'bg-error-container text-error' : 
                       alert.severity === 'MEDIUM' ? 'bg-secondary-container text-secondary' : 'bg-tertiary-container text-tertiary'
                     }`}>
-                      {alert.bias_type === 'GENDER_BIAS' ? 'wc' : alert.bias_type === 'REVIEWER_OUTLIER' ? 'person_off' : 'account_balance'}
+                      {alert.alert_type === 'GENDER_BIAS' ? 'wc' : alert.alert_type === 'REVIEWER_OUTLIER' ? 'person_off' : 'account_balance'}
                     </span>
                     <div>
-                      <h4 className="font-headline-sm text-[20px]">{alert.bias_type.replace('_', ' ')} Detected</h4>
+                      <h4 className="font-headline-sm text-[20px]">{alert.alert_type.replace(/_/g, ' ')} Detected</h4>
                       <p className="text-[12px] uppercase tracking-wider text-outline font-bold mt-1">P-Value: {alert.p_value?.toFixed(4) || "N/A"}</p>
                     </div>
                   </div>
@@ -150,45 +156,37 @@ export default function FairnessDashboard() {
           <div className="bg-white rounded-3xl p-6 border border-outline-variant/30 shadow-sm">
             <h4 className="font-label-md text-on-surface-variant uppercase tracking-widest mb-6">Reviewer Z-Scores</h4>
             <div className="space-y-4">
-              {/* Reviewer 1 */}
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-bold">Dr. Jenkins</span>
-                  <span className="text-error font-bold">-2.1</span>
-                </div>
-                <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden flex">
-                  <div className="w-1/2 flex justify-end">
-                    <div className="h-full bg-error rounded-l-full" style={{ width: '80%' }}></div>
+              {reviewerStats.length > 0 ? (
+                reviewerStats.map((stat, idx) => (
+                  <div key={idx}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-bold">{stat.reviewer_name || stat.reviewer_id}</span>
+                      <span className={`font-bold ${stat.z_score < -1.5 ? 'text-error' : stat.z_score > 1.5 ? 'text-primary' : 'text-tertiary'}`}>
+                        {stat.z_score > 0 ? '+' : ''}{stat.z_score.toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden flex">
+                      {stat.z_score < 0 ? (
+                        <>
+                          <div className="w-1/2 flex justify-end">
+                            <div className="h-full bg-error rounded-l-full" style={{ width: `${Math.min(100, Math.abs(stat.z_score) * 25)}%` }}></div>
+                          </div>
+                          <div className="w-1/2 border-l border-white"></div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-1/2 border-r border-white"></div>
+                          <div className="w-1/2 flex justify-start">
+                            <div className="h-full bg-primary rounded-r-full" style={{ width: `${Math.min(100, stat.z_score * 25)}%` }}></div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="w-1/2 border-l border-white"></div>
-                </div>
-              </div>
-              {/* Reviewer 2 */}
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-bold">Prof. Chen</span>
-                  <span className="text-primary font-bold">+1.5</span>
-                </div>
-                <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden flex">
-                  <div className="w-1/2 border-r border-white"></div>
-                  <div className="w-1/2 flex justify-start">
-                    <div className="h-full bg-primary rounded-r-full" style={{ width: '60%' }}></div>
-                  </div>
-                </div>
-              </div>
-              {/* Reviewer 3 */}
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-bold">Alex Rivera</span>
-                  <span className="text-tertiary font-bold">+0.2</span>
-                </div>
-                <div className="w-full h-3 bg-surface-container-high rounded-full overflow-hidden flex">
-                  <div className="w-1/2 border-r border-white"></div>
-                  <div className="w-1/2 flex justify-start">
-                    <div className="h-full bg-tertiary rounded-r-full" style={{ width: '10%' }}></div>
-                  </div>
-                </div>
-              </div>
+                ))
+              ) : (
+                <p className="text-on-surface-variant text-sm">No reviewer stats available.</p>
+              )}
             </div>
             <p className="text-[11px] text-outline mt-6 italic">Visualizing deviations from the mean score (0). Action recommended for |Z| &gt; 2.0.</p>
           </div>

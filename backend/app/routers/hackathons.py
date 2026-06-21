@@ -1,8 +1,10 @@
 import uuid
+from datetime import date
 from typing import List, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from ..deps import get_db
@@ -11,80 +13,63 @@ from ..models.hackathon import Hackathon
 router = APIRouter()
 
 
-# --------------- Pydantic schemas ---------------
-
 class HackathonCreate(BaseModel):
-    title: str
-    description: Optional[str] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+    name: str
+    theme: Optional[str] = None
+    description: str | None = None
+    registration_start: Optional[date] = None
+    registration_end: Optional[date] = None
+
+    event_start: Optional[date] = None
+    event_end: Optional[date] = None
+
+    min_team_size: int = 1
+    max_team_size: int = 4
 
 
 class HackathonOut(BaseModel):
-    id: str
-    title: str
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    theme: Optional[str] = None
     description: Optional[str] = None
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    registration_start: Optional[date] = None
+    registration_end: Optional[date] = None
 
+    event_start: Optional[date] = None
+    event_end: Optional[date] = None
 
-# --------------- CRUD endpoints ---------------
+    min_team_size: int
+    max_team_size: int
+
 
 @router.post("/", response_model=HackathonOut)
-async def create_hackathon(data: HackathonCreate, db: Session = Depends(get_db)):
-    """Create a new hackathon."""
+async def create_hackathon(
+    data: HackathonCreate,
+    db: Session = Depends(get_db)
+):
     hackathon = Hackathon(
         id=uuid.uuid4(),
-        title=data.title,
+        name=data.name,
+        theme=data.theme,
         description=data.description,
-        start_date=data.start_date,
-        end_date=data.end_date,
+        registration_start=data.registration_start,
+        registration_end=data.registration_end,
+        event_start=data.event_start,
+        event_end=data.event_end,
+        min_team_size=data.min_team_size,
+        max_team_size=data.max_team_size,
     )
+
     db.add(hackathon)
     db.commit()
     db.refresh(hackathon)
+
     return hackathon
 
 
 @router.get("/", response_model=List[HackathonOut])
 async def list_hackathons(db: Session = Depends(get_db)):
-    """List all hackathons."""
     return db.query(Hackathon).all()
-
-
-@router.get("/{hackathon_id}", response_model=HackathonOut)
-async def get_hackathon(hackathon_id: str, db: Session = Depends(get_db)):
-    """Get a hackathon by ID."""
-    h = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
-    if not h:
-        raise HTTPException(status_code=404, detail="Hackathon not found")
-    return h
-
-
-@router.put("/{hackathon_id}", response_model=HackathonOut)
-async def update_hackathon(hackathon_id: str, data: HackathonCreate, db: Session = Depends(get_db)):
-    """Update a hackathon."""
-    h = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
-    if not h:
-        raise HTTPException(status_code=404, detail="Hackathon not found")
-    h.title = data.title
-    h.description = data.description
-    h.start_date = data.start_date
-    h.end_date = data.end_date
-    db.commit()
-    db.refresh(h)
-    return h
-
-
-@router.delete("/{hackathon_id}")
-async def delete_hackathon(hackathon_id: str, db: Session = Depends(get_db)):
-    """Delete a hackathon."""
-    h = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
-    if not h:
-        raise HTTPException(status_code=404, detail="Hackathon not found")
-    db.delete(h)
-    db.commit()
-    return {"detail": "deleted"}

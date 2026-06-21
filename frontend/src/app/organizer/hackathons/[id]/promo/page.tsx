@@ -16,7 +16,8 @@ export default function PromoToolsPage({ params }: { params: Promise<{ id: strin
   const handleGeneratePromo = async () => {
     setIsLoadingPromo(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/organizer/generate-promo/${hackathonId}`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/organizer/generate-promo/${hackathonId}`, {
         method: "POST",
       });
       if (res.ok) {
@@ -36,7 +37,8 @@ export default function PromoToolsPage({ params }: { params: Promise<{ id: strin
   const handleGenerateReport = async () => {
     setIsLoadingReport(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/organizer/generate-success-report/${hackathonId}`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/organizer/generate-success-report/${hackathonId}`, {
         method: "POST",
       });
       if (res.ok) {

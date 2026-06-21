@@ -66,7 +66,8 @@ export default function CreateTeam() {
         member_ids: session?.user?.id ? [session.user.id] : []
       };
 
-      const res = await fetch("http://localhost:8000/teams/create", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/teams/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

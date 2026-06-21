@@ -21,7 +21,8 @@ export default function OrganizerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/hackathons/`)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    fetch(`${apiUrl}/hackathons/`)
       .then(res => res.json())
       .then(data => {
         setHackathons(data);
@@ -44,6 +45,29 @@ export default function OrganizerDashboard() {
           <p className="text-on-surface-variant mt-1 text-sm">Welcome back. Here's what's happening across your {hackathons.length} hackathons.</p>
         </div>
         <div className="flex gap-3">
+          <button 
+            onClick={async () => {
+              if (confirm("Run AI Team Formation to group unassigned participants?")) {
+                try {
+                  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+                  const res = await fetch(`${apiUrl}/teams/form`, { method: "POST" });
+                  if (res.ok) alert("Team formation started in background!");
+                  else alert("Failed to start team formation.");
+                } catch (e) {
+                  alert("Error triggering formation.");
+                }
+              }
+            }}
+            className="border-2 border-secondary/20 text-secondary px-5 py-2 rounded-lg font-label-sm hover:bg-secondary/5 transition-colors flex items-center gap-2">
+            <span className="material-symbols-outlined text-[16px]">group_add</span>
+            AI Team Assembly
+          </button>
+          <Link href="/organizer/dashboard/audit">
+            <button className="border-2 border-tertiary/20 text-tertiary px-5 py-2 rounded-lg font-label-sm hover:bg-tertiary/5 transition-colors flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">shield</span>
+              Audit Trail
+            </button>
+          </Link>
           <Link href="/organizer/dashboard/fairness">
             <button className="border-2 border-primary/20 text-primary px-5 py-2 rounded-lg font-label-sm hover:bg-primary/5 transition-colors flex items-center gap-2">
               <span className="material-symbols-outlined text-[16px]">gavel</span>

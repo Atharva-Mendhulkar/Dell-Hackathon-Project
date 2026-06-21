@@ -193,7 +193,8 @@ export default function ReviewerDashboard() {
         feedback: commentInput
       };
 
-      const res = await fetch("http://localhost:8000/evaluations/submit", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/evaluations/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

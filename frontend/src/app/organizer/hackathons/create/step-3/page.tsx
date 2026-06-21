@@ -56,7 +56,7 @@ export default function CreateHackathonStep3() {
     
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      await fetch(`${apiUrl}/problem-statements/rubrics`, {
+      await fetch(`${apiUrl}/hackathons/${draftId}/rubrics`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rubrics })

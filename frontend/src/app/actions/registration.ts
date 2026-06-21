@@ -91,7 +91,7 @@ export async function submitRegistration(payload: SubmitRegistrationPayload) {
 }
 
 export async function fetchRegistrations() {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   // For organizers
   const { data, error } = await supabase
