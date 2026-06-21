@@ -257,10 +257,18 @@ def get_valid_team_member_ids(db: Session, team: Team) -> list[str]:
     raw_ids = [str(member_id) for member_id in (team.member_ids or [])]
     if not raw_ids:
         return []
-    found_ids = {
-        str(participant.id)
-        for participant in db.query(Participant).filter(Participant.id.in_(raw_ids)).all()
-    }
+    
+    participants = db.query(Participant).filter(
+        (Participant.id.in_(raw_ids)) | (Participant.user_id.in_(raw_ids))
+    ).all()
+    
+    found_ids = set()
+    for p in participants:
+        if str(p.id) in raw_ids:
+            found_ids.add(str(p.id))
+        if p.user_id and str(p.user_id) in raw_ids:
+            found_ids.add(str(p.user_id))
+            
     return [member_id for member_id in raw_ids if member_id in found_ids]
 
 

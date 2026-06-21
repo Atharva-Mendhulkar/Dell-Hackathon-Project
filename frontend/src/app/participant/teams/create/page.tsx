@@ -22,19 +22,20 @@ function buildRequiredVector(skills: string[]) {
   }, {} as Record<string, number>);
 }
 
-function calculateRecruitMatch(participantVector: Record<string, number>, requiredVector: Record<string, number>) {
-  let score = 0;
-  let maxPossible = 0;
+function calculateRecruitMatch(participantSkills: string[], requiredSkills: string[]) {
+  if (!requiredSkills || requiredSkills.length === 0) return 0;
   
-  for (const [skill, weight] of Object.entries(requiredVector)) {
-    maxPossible += weight;
-    if (participantVector[skill]) {
-      score += participantVector[skill] * weight;
+  const lowerParticipantSkills = (participantSkills || []).map((s: string) => s.toLowerCase().trim());
+  if (lowerParticipantSkills.length === 0) return 0;
+  
+  let matchCount = 0;
+  for (const reqSkill of requiredSkills) {
+    if (lowerParticipantSkills.includes(reqSkill.toLowerCase().trim())) {
+      matchCount++;
     }
   }
   
-  if (maxPossible === 0) return 0;
-  return Math.round((score / maxPossible) * 100);
+  return Math.round((matchCount / requiredSkills.length) * 100);
 }
 
 export default function CreateTeam() {
@@ -45,7 +46,48 @@ export default function CreateTeam() {
   const [newSkill, setNewSkill] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [invitedMemberIds, setInvitedMemberIds] = useState<string[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleInvite = async (recruit: any) => {
+    setInvitedMemberIds(prev => [...prev, recruit.id]);
+    
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const apiBase = getApiBaseUrl();
+      
+      if (session?.user?.id) {
+        const pRes = await fetch(`${apiBase}/participants/${session.user.id}`);
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          if (pData.team_id) {
+            await fetch(`${apiBase}/teams/${pData.team_id}/add_member`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ participant_id: recruit.id })
+            });
+          } else {
+            await fetch(`${apiBase}/teams/create`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: teamName || "Unnamed Team",
+                member_ids: [session.user.id, ...invitedMemberIds, recruit.id]
+              })
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Auto-save failed", e);
+    }
+
+    setToastMessage(`${recruit.name} has accepted the invite!`);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  };
 
   const handleCreateTeam = async () => {
     try {
@@ -129,11 +171,9 @@ export default function CreateTeam() {
     loadTeam();
   }, []);
 
-  const currentRequiredVector = buildRequiredVector(requiredSkills);
-
   const sortedRecruits = [...recruits].map(p => ({
     ...p,
-    matchScore: calculateRecruitMatch(p.skill_vector || {}, currentRequiredVector)
+    matchScore: calculateRecruitMatch(p.declared_skills || (p as any).skills || [], requiredSkills)
   })).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
 
   return (
@@ -280,6 +320,17 @@ export default function CreateTeam() {
                         {member.name}
                       </div>
                     ))}
+                    {recruits.filter(r => invitedMemberIds.includes(r.id)).map((member) => (
+                      <div key={member.id} className="font-label-md text-on-surface px-3 py-2 bg-surface-container-low border border-primary/20 rounded-md flex justify-between items-center">
+                        <span>{member.name} <span className="text-[12px] text-tertiary ml-2">(Invited)</span></span>
+                        <button 
+                          onClick={() => setInvitedMemberIds(prev => prev.filter(id => id !== member.id))}
+                          className="text-on-surface-variant hover:text-error transition-colors flex items-center"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">close</span>
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -300,7 +351,7 @@ export default function CreateTeam() {
                         <p className="text-[12px] text-tertiary font-bold">{recruit.matchScore}% Match</p>
                       </div>
                       <button 
-                        onClick={() => setInvitedMemberIds(prev => [...prev, recruit.id])}
+                        onClick={() => handleInvite(recruit)}
                         disabled={invitedMemberIds.includes(recruit.id)}
                         className={`text-[12px] px-3 py-1.5 rounded-full font-bold hover:scale-105 transition-transform ${invitedMemberIds.includes(recruit.id) ? "bg-surface-variant text-on-surface-variant" : "bg-primary text-white"}`}
                       >
@@ -349,6 +400,13 @@ export default function CreateTeam() {
           </div>
         </div>
       </div>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-surface-container-high text-on-surface px-6 py-3 rounded-full shadow-lg border border-outline-variant/20 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 z-[60]">
+          <span className="material-symbols-outlined text-green-500">check_circle</span>
+          <span className="font-label-md">{toastMessage}</span>
+        </div>
+      )}
     </>
   );
 }

@@ -45,6 +45,11 @@ export default function TeamWorkspace() {
               const mRes = await fetch(`${apiBase}/participants/${mid}`);
               if (mRes.ok) teamMembers.push(await mRes.json());
             }
+            
+            if (!teamMembers.some(m => m.id === pData.id)) {
+              teamMembers.unshift(pData);
+            }
+            
             setMembers(teamMembers);
 
             const subRes = await fetch(`${apiBase}/submissions/team/${pData.team_id}`);
