@@ -14,4 +14,4 @@ from .fairness_report import FairnessReport
 from .ranking_confidence import RankingConfidence
 from .reviewer_stats import ReviewerStats
 from .normalised_score import NormalizedScore
-
+from .invite import Invite

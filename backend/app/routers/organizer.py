@@ -89,8 +89,8 @@ async def all_registrations(db: Session = Depends(get_db)):
 from fastapi import HTTPException
 from ..models.problem_statement import ProblemStatement
 from ..models.hackathon import Hackathon
-from participant_ai.pipelines.promo.generator import generate_promotional_content
-from participant_ai.pipelines.reporting.pitch_generator import generate_success_report
+from app.services.ai.pipelines.promo.generator import generate_promotional_content
+from app.services.ai.pipelines.reporting.pitch_generator import generate_success_report
 
 @router.post("/generate-promo/{hackathon_id}")
 async def generate_promo_content(hackathon_id: str, db: Session = Depends(get_db)):

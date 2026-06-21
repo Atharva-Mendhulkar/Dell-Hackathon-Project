@@ -1,3 +1,0 @@
-# Participant AI pipeline dependencies
-openai>=0.8.0
-pydantic>=2.0.0

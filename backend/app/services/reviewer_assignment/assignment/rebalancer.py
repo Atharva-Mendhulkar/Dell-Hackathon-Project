@@ -13,7 +13,7 @@ from app.services.reviewer_assignment.db.reviewer_repository import (
 
 def rebalance_assignments(
     assignments,
-    threshold=1.5, #should change to 0.10
+    threshold=0.10,
     max_iterations=100
 ):
 

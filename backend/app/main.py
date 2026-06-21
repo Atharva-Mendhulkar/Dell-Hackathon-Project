@@ -47,7 +47,7 @@ async def startup():
     
     # Preload the sentence-transformers model so the first request doesn't hang
     try:
-        from participant_ai.core.embeddings import _get_model
+        from app.services.ai.core.embeddings import _get_model
         _get_model()
     except ImportError:
         pass

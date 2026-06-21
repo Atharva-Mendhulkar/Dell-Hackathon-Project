@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_db
 from ..models.problem_statement import ProblemStatement
-from participant_ai.pipelines.problem_statement.parser import parse_ps
+from app.services.ai.pipelines.problem_statement.parser import parse_ps
 
 router = APIRouter()
 
@@ -34,11 +34,11 @@ class ProblemStatementOut(BaseModel):
 
 @router.post("/", response_model=ProblemStatementOut)
 async def create_problem_statement(data: ProblemStatementCreate, db: Session = Depends(get_db)):
-    """Create a new problem statement, parsing requirements via participant_ai."""
+    """Create a new problem statement, parsing requirements via app.services.ai."""
     
     ps_id = str(uuid.uuid4())
     
-    # Parse PS using participant_ai
+    # Parse PS using app.services.ai
     try:
         parsed_req = parse_ps(
             raw_text=data.raw_text,

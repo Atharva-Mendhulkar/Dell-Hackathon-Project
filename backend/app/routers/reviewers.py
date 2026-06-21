@@ -50,7 +50,7 @@ async def register_reviewer(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Register a new reviewer, parsing skills from their uploaded resume."""
+    """Register a new reviewer. Resume skill parsing runs in background via Celery."""
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported for resumes")
 
@@ -67,18 +67,11 @@ async def register_reviewer(
     if not text.strip():
         raise HTTPException(status_code=400, detail="Could not extract any text from the PDF")
 
-    from participant_ai.pipelines.resume_rag.parser import parse_and_vectorize_batch
-
-    # Extract skills using participant_ai
-    results = await parse_and_vectorize_batch([text], max_concurrency=1)
-    parsed, vector, embedding, breakdown = results[0]
-
+    reviewer_id = uuid.uuid4()
     reviewer = Reviewer(
-        reviewer_id=uuid.uuid4(),
+        reviewer_id=reviewer_id,
         name=name,
         resume_text=text,
-        skills_json=parsed.dict() if hasattr(parsed, 'dict') else {},
-        skill_vector=vector.to_dict(),
         primary_specialization=primary_specialization,
         secondary_specializations=[],
         current_load=0,
@@ -87,6 +80,11 @@ async def register_reviewer(
     db.add(reviewer)
     db.commit()
     db.refresh(reviewer)
+    
+    # Dispatch heavy LLM resume parsing to Celery background worker
+    from app.tasks.resume_tasks import parse_reviewer_resume
+    parse_reviewer_resume.delay(str(reviewer_id), text)
+
     return reviewer
 
 

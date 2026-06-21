@@ -7,12 +7,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Add project root to sys.path to resolve participant_ai
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app.database import execute
-from participant_ai.pipelines.resume_rag.parser import parse_and_vectorize_batch
-from participant_ai.pipelines.bias.analyzer import BiasDetectionService
+from app.services.ai.pipelines.resume_rag.parser import parse_and_vectorize_batch
 from app.database import fetch_all
 
 # Initialize Celery App
@@ -71,16 +68,4 @@ def process_resume_task(user_id: str, raw_text: str):
         return {"status": "success", "user_id": user_id}
     except Exception as e:
         print(f"[Celery Error] Task failed for user {user_id}: {e}")
-        return {"status": "failed", "error": str(e)}
-
-@celery_app.task(name="detect_bias_task")
-def detect_bias_task(hackathon_id: str):
-    """
-    Background worker task to run statistical bias detection algorithms.
-    """
-    try:
-        BiasDetectionService.analyze(hackathon_id, fetch_all, execute)
-        return {"status": "success", "hackathon_id": hackathon_id}
-    except Exception as e:
-        print(f"[Celery Error] Bias detection failed: {e}")
         return {"status": "failed", "error": str(e)}

@@ -16,3 +16,6 @@ celery_app.conf.update(
 
 import app.tasks.reviewer_tasks
 import app.tasks.fairness_tasks
+import app.tasks.resume_tasks
+import app.tasks.evaluation_tasks
+import app.tasks.team_tasks

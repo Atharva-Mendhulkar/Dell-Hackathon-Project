@@ -62,7 +62,7 @@ async def register_participant(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """Store a new participant registration, extracting skills from their uploaded resume."""
+    """Store a new participant registration. Resume skill parsing runs in background via Celery."""
     existing = db.query(Participant).filter(Participant.id == id).first()
     if existing:
         raise HTTPException(status_code=409, detail="Participant already registered")
@@ -82,26 +82,23 @@ async def register_participant(
     if not text.strip():
         raise HTTPException(status_code=400, detail="Could not extract any text from the PDF")
 
-    from participant_ai.pipelines.resume_rag.parser import parse_and_vectorize_batch
-
-    # Extract skills using participant_ai
-    results = await parse_and_vectorize_batch([text], max_concurrency=1)
-    parsed, vector, embedding, breakdown = results[0]
-
+    # Save participant immediately with pending status
     participant = Participant(
         id=id,
-        name=name or parsed.name,
-        college_name=college_name or parsed.college_name,
-        year_of_study=parsed.year_of_study,
-        github_url=github_url or parsed.github_url,
-        linkedin_url=parsed.linkedin_url,
-        declared_skills=parsed.raw_skills if hasattr(parsed, 'raw_skills') else [],
-        skill_vector=vector.to_dict(),
+        name=name,
+        college_name=college_name,
+        github_url=github_url,
         team_id=None,
+        vectorization_status="pending",
     )
     db.add(participant)
     db.commit()
     db.refresh(participant)
+
+    # Dispatch heavy LLM resume parsing to Celery background worker
+    from app.tasks.resume_tasks import parse_participant_resume
+    parse_participant_resume.delay(id, text)
+
     return participant
 
 
@@ -155,7 +152,7 @@ async def delete_participant(participant_id: str, db: Session = Depends(get_db))
 @router.post("/analyze_resume", response_model=ResumeAnalysisResponse)
 async def analyze_resume(request: ResumeAnalysisRequest):
     """Parses resume text and returns skill analysis."""
-    from participant_ai.pipelines.resume_rag.parser import parse_and_vectorize_batch
+    from app.services.ai.pipelines.resume_rag.parser import parse_and_vectorize_batch
 
     results = await parse_and_vectorize_batch([request.resume_text], max_concurrency=1)
     parsed, vector, embedding, breakdown = results[0]
@@ -188,7 +185,7 @@ async def upload_resume(file: UploadFile = File(...)):
     if not text.strip():
         raise HTTPException(status_code=400, detail="Could not extract any text from the PDF")
 
-    from participant_ai.pipelines.resume_rag.parser import parse_and_vectorize_batch
+    from app.services.ai.pipelines.resume_rag.parser import parse_and_vectorize_batch
 
     results = await parse_and_vectorize_batch([text], max_concurrency=1)
     parsed, vector, embedding, breakdown = results[0]
@@ -366,7 +363,7 @@ class ChatRequest(BaseModel):
 @router.post("/chat")
 async def chat_with_bot(request: ChatRequest, db: Session = Depends(get_db)):
     """Ask the RAG Chatbot a question about the hackathon."""
-    from participant_ai.pipelines.chatbot.rag import ask_chatbot
+    from app.services.ai.pipelines.chatbot.rag import ask_chatbot
     
     try:
         response = ask_chatbot(request.question, request.hackathon_id, db)

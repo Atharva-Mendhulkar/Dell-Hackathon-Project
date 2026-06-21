@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from ..database import execute, fetch_all
 from ..deps import get_db
 from ..models.evaluation import Evaluation
-from ..worker import detect_bias_task
 
 router = APIRouter()
 
@@ -46,9 +45,6 @@ async def submit_evaluation(request: EvaluationSubmitRequest):
         ))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to submit evaluation: {str(e)}")
-
-    # Trigger background bias detection
-    detect_bias_task.delay(request.hackathon_id)
 
     return {"status": "success", "evaluation_id": eval_id}
 
@@ -148,47 +144,30 @@ async def get_evaluation(evaluation_id: str, db: Session = Depends(get_db)):
 
 from ..models.team import Team
 from ..models.idea_submission import IdeaSubmission
-from participant_ai.pipelines.feedback.nlg import generate_team_feedback
+from app.services.ai.pipelines.feedback.nlg import generate_team_feedback
 from sqlalchemy import func
 
 @router.post("/compute-results/{hackathon_id}")
-async def compute_results(hackathon_id: str, db: Session = Depends(get_db)):
-    """Computes final results and triggers NLG feedback generation for all teams."""
-    
-    # Get all evaluations
-    evals = db.query(Evaluation).all()
-    if not evals:
-        return {"message": "No evaluations found to compute results."}
-        
-    global_avg = sum(e.score for e in evals if e.score) / len(evals)
-    
-    # Group by idea
-    ideas = db.query(IdeaSubmission).all()
-    count = 0
-    
-    for idea in ideas:
-        idea_evals = [e for e in evals if str(e.idea_id) == str(idea.idea_id)]
-        if not idea_evals:
-            continue
-            
-        team = db.query(Team).filter(Team.team_id == idea.team_id).first()
-        team_name = team.name if team else "Unknown Team"
-        
-        eval_data = [{"score": e.score, "feedback": e.feedback} for e in idea_evals if e.score is not None]
-        
-        try:
-            feedback_json = generate_team_feedback(
-                team_name=team_name,
-                project_title=idea.title or "Untitled",
-                project_description=idea.description or "No description",
-                evaluations=eval_data,
-                global_average_score=global_avg
-            )
-            idea.ai_feedback = feedback_json.get("feedback_text", "Could not generate feedback.")
-            count += 1
-        except Exception as e:
-            print(f"Failed to generate feedback for {idea.idea_id}: {e}")
-            
-    db.commit()
-    return {"message": f"Successfully computed results and generated feedback for {count} teams."}
+async def compute_results(hackathon_id: str):
+    """Computes final results and triggers NLG feedback generation for all teams in the background."""
+    from app.tasks.evaluation_tasks import compute_results_task
+    task = compute_results_task.delay(hackathon_id)
+    return {
+        "status": "queued",
+        "message": "Result computation and feedback generation started",
+        "task_id": task.id
+    }
 
+class FairnessTriggerRequest(BaseModel):
+    round_id: str
+
+@router.post("/trigger-fairness")
+async def trigger_fairness(request: FairnessTriggerRequest):
+    """Triggers the fairness engine pipeline in the background."""
+    from app.tasks.fairness_tasks import fairness_pipeline_task
+    task = fairness_pipeline_task.delay(request.round_id)
+    return {
+        "status": "queued",
+        "message": "Fairness pipeline started",
+        "task_id": task.id
+    }
