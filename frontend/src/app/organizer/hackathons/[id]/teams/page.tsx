@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import { useParams } from "next/navigation";
 
 export default function HackathonTeams() {
+  const params = useParams();
+
   useEffect(() => {
     // Simple micro-interaction for hover states on metrics
     document.querySelectorAll('.bento-card').forEach(card => {
@@ -33,6 +36,23 @@ export default function HackathonTeams() {
           <h3 className="font-headline-md text-[32px] font-bold">Teams Ecosystem</h3>
         </div>
         <div className="flex gap-2">
+          <button 
+            onClick={async () => {
+              if (confirm("Run AI Team Formation to group unassigned participants for this hackathon?")) {
+                try {
+                  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+                  const res = await fetch(`${apiUrl}/teams/form?hackathon_id=${params.id}`, { method: "POST" });
+                  if (res.ok) alert("Team formation started in background!");
+                  else alert("Failed to start team formation.");
+                } catch (e) {
+                  alert("Error triggering formation.");
+                }
+              }
+            }}
+            className="border-2 border-secondary/20 text-secondary px-4 py-2 rounded-xl flex items-center gap-2 text-[14px] font-bold hover:bg-secondary/5 transition-colors">
+            <span className="material-symbols-outlined text-[20px]">group_add</span>
+            AI Team Assembly
+          </button>
           <button className="bg-white border border-outline-variant/30 text-on-surface-variant px-4 py-2 rounded-xl flex items-center gap-2 text-[14px] font-bold hover:bg-surface-container-low transition-colors">
             <span className="material-symbols-outlined text-[20px]">filter_list</span>
             Advanced Filters

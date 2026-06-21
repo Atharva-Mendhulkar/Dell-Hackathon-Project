@@ -1,11 +1,11 @@
 import json
 from typing import Dict
 
-from app.services.ai.core.llm import call_json
+from app.services.ai.core.llm import call_json_async
 from app.models.hackathon import Hackathon
 
 
-def generate_success_report(
+async def generate_success_report(
     hackathon: Hackathon, stats: Dict[str, int]
 ) -> Dict[str, str]:
     """Generates a Hackathon Success Report / Pitch Deck summary."""
@@ -13,8 +13,8 @@ def generate_success_report(
     prompt = f"""
 You are a technical hackathon organizer generating a post-event "Success Report" and "Pitch Deck" summary for sponsors and university administration.
 
-Hackathon Name: {hackathon.title}
-Theme: {hackathon.description}
+Hackathon Name: {hackathon.name}
+Theme: {hackathon.theme or hackathon.description}
 
 Key Statistics:
 - Total Participants: {stats.get("total_participants", 0)}
@@ -26,8 +26,8 @@ Key Statistics:
 Generate an executive summary report.
 Return a strictly valid JSON object with the following keys:
 - "executive_summary": A strong, one-paragraph summary of the event's impact.
-- "key_highlights": A markdown-formatted list of 3-4 bullet points highlighting the success based on the statistics.
-- "sponsor_message": A drafted message to send to sponsors thanking them for their support and highlighting the ROI.
+- "metrics_highlights": An array of strings, where each string is a 1-2 sentence bullet point highlighting a success metric.
+- "sponsor_pitch": A drafted message to send to sponsors thanking them for their support and highlighting the ROI.
 """
 
-    return call_json(prompt)
+    return await call_json_async(prompt)

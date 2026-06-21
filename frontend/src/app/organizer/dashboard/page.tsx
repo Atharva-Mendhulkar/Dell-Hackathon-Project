@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 interface Hackathon {
@@ -34,8 +37,44 @@ export default function OrganizerDashboard() {
 
   const activeCount = hackathons.filter(h => h.status === 'active' || h.status === 'published').length;
 
+  const mockChartData = [
+    { day: 'Mon', value: 45 },
+    { day: 'Tue', value: 68 },
+    { day: 'Wed', value: 120 },
+    { day: 'Thu', value: 250 },
+    { day: 'Fri', value: 310 },
+    { day: 'Sat', value: 420 },
+    { day: 'Sun', value: 580 },
+  ];
+  const maxValue = Math.max(...mockChartData.map(d => d.value));
+
+  const mockSubmissionsData = [
+    { label: 'Week 1', value: 10 },
+    { label: 'Week 2', value: 45 },
+    { label: 'Week 3', value: 120 },
+    { label: 'Week 4', value: 350 },
+  ];
+  const maxSubValue = Math.max(...mockSubmissionsData.map(d => d.value));
+
   return (
-    <div className="p-4 md:p-6 h-[calc(100vh-64px)] max-w-7xl mx-auto flex flex-col gap-4 md:gap-6 w-full overflow-hidden">
+    <>
+      {/* Glassmorphism Navbar */}
+      <nav className="fixed top-0 left-0 right-0 h-16 bg-white/60 backdrop-blur-md border-b border-outline-variant/20 flex items-center justify-between px-4 md:px-6 z-50">
+        <div className="flex items-center">
+          <div className="relative w-[192px] h-[192px] -my-16 -ml-8">
+            <Image src="/logo.png" alt="Dell Logo" fill className="object-contain object-left" />
+          </div>
+        </div>
+        <Link href="/organizer/hackathons/create/step-1">
+          <button className="bg-primary text-white px-4 md:px-5 py-2 rounded-lg font-label-sm hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm">
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            <span className="hidden sm:inline">Create Hackathon</span>
+            <span className="sm:hidden">Create</span>
+          </button>
+        </Link>
+      </nav>
+
+      <div className="pt-24 pb-12 px-4 md:px-6 min-h-screen max-w-7xl mx-auto flex flex-col gap-4 md:gap-6 w-full">
       {/* Page Heading */}
       <div className="flex justify-between items-end flex-shrink-0">
         <div>
@@ -43,41 +82,6 @@ export default function OrganizerDashboard() {
           <p className="text-on-surface-variant mt-1 text-sm">Welcome back. Here's what's happening across your {hackathons.length} hackathons.</p>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={async () => {
-              if (confirm("Run AI Team Formation to group unassigned participants?")) {
-                try {
-                  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-                  const res = await fetch(`${apiUrl}/teams/form`, { method: "POST" });
-                  if (res.ok) alert("Team formation started in background!");
-                  else alert("Failed to start team formation.");
-                } catch (e) {
-                  alert("Error triggering formation.");
-                }
-              }
-            }}
-            className="border-2 border-secondary/20 text-secondary px-5 py-2 rounded-lg font-label-sm hover:bg-secondary/5 transition-colors flex items-center gap-2">
-            <span className="material-symbols-outlined text-[16px]">group_add</span>
-            AI Team Assembly
-          </button>
-          <Link href="/organizer/dashboard/audit">
-            <button className="border-2 border-tertiary/20 text-tertiary px-5 py-2 rounded-lg font-label-sm hover:bg-tertiary/5 transition-colors flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">shield</span>
-              Audit Trail
-            </button>
-          </Link>
-          <Link href="/organizer/dashboard/fairness">
-            <button className="border-2 border-primary/20 text-primary px-5 py-2 rounded-lg font-label-sm hover:bg-primary/5 transition-colors flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">gavel</span>
-              Fairness Engine
-            </button>
-          </Link>
-          <Link href="/organizer/hackathons/create/step-1">
-            <button className="bg-primary text-white px-5 py-2 rounded-lg font-label-sm hover:bg-primary/90 transition-colors flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">add</span>
-              New Hackathon
-            </button>
-          </Link>
         </div>
       </div>
 
@@ -151,7 +155,7 @@ export default function OrganizerDashboard() {
                 </div>
               )}
               
-              {hackathons.map((h) => (
+              {hackathons.slice(0, 2).map((h) => (
                 <Link key={h.id} href={`/organizer/hackathons/${h.public_slug || h.id}`} className="block group">
                   <div className="bg-white rounded-xl border border-outline-variant/30 p-4 shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer h-full flex flex-col">
                     <div className="flex justify-between items-start mb-3">
@@ -180,6 +184,15 @@ export default function OrganizerDashboard() {
                 </Link>
               ))}
             </div>
+            {hackathons.length > 2 && (
+              <div className="flex justify-center mt-2">
+                <Link href="/organizer/hackathons">
+                  <button className="text-primary font-bold text-sm flex items-center gap-1 hover:underline">
+                    See All Hackathons <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </button>
+                </Link>
+              </div>
+            )}
           </div>
 
           
@@ -224,6 +237,65 @@ export default function OrganizerDashboard() {
       <p className="text-sm text-primary mt-1">580 submissions</p>
     </div>
   </div>
+  
+  {/* Visualization Graphs */}
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mt-2">
+    {/* Registration Trend Graph */}
+    <div className="bg-white p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex flex-col h-72">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="font-headline-sm text-[16px] font-bold text-primary">Registration Trend</h3>
+      <select className="text-sm bg-surface-container-low border-none rounded-lg px-3 py-1.5 outline-none text-on-surface-variant font-medium cursor-pointer">
+        <option>Last 7 Days</option>
+        <option>Last 30 Days</option>
+      </select>
+    </div>
+    <div className="flex-1 flex items-end gap-2 md:gap-6 justify-between pt-4 pb-2 border-b border-outline-variant/20">
+      {mockChartData.map((data, i) => (
+        <div key={i} className="flex flex-col items-center gap-3 flex-1 group h-full">
+          <div className="relative w-full flex justify-center h-full items-end">
+            <div 
+              className="w-full max-w-[48px] bg-primary/20 group-hover:bg-primary/50 rounded-t-lg transition-all duration-300 relative cursor-pointer"
+              style={{ height: `${(data.value / maxValue) * 100}%` }}
+            >
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[11px] font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md">
+                {data.value}
+              </div>
+            </div>
+          </div>
+          <span className="text-[11px] md:text-xs text-on-surface-variant font-medium uppercase tracking-wider">{data.day}</span>
+        </div>
+      ))}
+      </div>
+    </div>
+
+    {/* Submissions Over Time Graph */}
+    <div className="bg-white p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex flex-col h-72">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="font-headline-sm text-[16px] font-bold text-tertiary">Submissions Over Time</h3>
+        <select className="text-sm bg-surface-container-low border-none rounded-lg px-3 py-1.5 outline-none text-on-surface-variant font-medium cursor-pointer">
+          <option>Last 4 Weeks</option>
+          <option>Last 12 Weeks</option>
+        </select>
+      </div>
+      <div className="flex-1 flex items-end gap-2 md:gap-8 justify-between pt-4 pb-2 border-b border-outline-variant/20">
+        {mockSubmissionsData.map((data, i) => (
+          <div key={i} className="flex flex-col items-center gap-3 flex-1 group h-full">
+            <div className="relative w-full flex justify-center h-full items-end">
+              <div 
+                className="w-full max-w-[64px] bg-tertiary/20 group-hover:bg-tertiary/50 rounded-t-lg transition-all duration-300 relative cursor-pointer"
+                style={{ height: `${(data.value / maxSubValue) * 100}%` }}
+              >
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[11px] font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-md">
+                  {data.value}
+                </div>
+              </div>
+            </div>
+            <span className="text-[11px] md:text-xs text-on-surface-variant font-medium uppercase tracking-wider">{data.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
 </div>
             
         
@@ -233,5 +305,6 @@ export default function OrganizerDashboard() {
         </div>
       </div>
     </div>
+    </>
   );
 }

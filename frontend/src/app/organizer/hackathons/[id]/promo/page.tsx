@@ -13,6 +13,15 @@ export default function PromoToolsPage({ params }: { params: Promise<{ id: strin
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const [reportContent, setReportContent] = useState<any>(null);
 
+  const renderText = (content: any) => {
+    if (!content) return "";
+    if (typeof content === "string") return content;
+    if (typeof content === "object") {
+      return Object.entries(content).map(([k, v]) => `${k.toUpperCase()}:\n${v}`).join("\n\n");
+    }
+    return String(content);
+  };
+
   const handleGeneratePromo = async () => {
     setIsLoadingPromo(true);
     try {
@@ -89,19 +98,19 @@ export default function PromoToolsPage({ params }: { params: Promise<{ id: strin
                 <div>
                   <h3 className="font-bold text-[14px] uppercase text-outline mb-2">Twitter / X</h3>
                   <div className="bg-white p-4 rounded border border-outline-variant/20 whitespace-pre-wrap text-[14px] font-medium text-on-surface">
-                    {promoContent.twitter}
+                    {renderText(promoContent.twitter)}
                   </div>
                 </div>
                 <div>
                   <h3 className="font-bold text-[14px] uppercase text-outline mb-2">LinkedIn</h3>
                   <div className="bg-white p-4 rounded border border-outline-variant/20 whitespace-pre-wrap text-[14px] font-medium text-on-surface">
-                    {promoContent.linkedin}
+                    {renderText(promoContent.linkedin)}
                   </div>
                 </div>
                 <div>
                   <h3 className="font-bold text-[14px] uppercase text-outline mb-2">Email Newsletter</h3>
                   <div className="bg-white p-4 rounded border border-outline-variant/20 whitespace-pre-wrap text-[14px] font-medium text-on-surface">
-                    {promoContent.email}
+                    {renderText(promoContent.email)}
                   </div>
                 </div>
               </div>
