@@ -58,11 +58,7 @@ export default function LandingPage() {
           <Link href="/" className="flex items-center mt-1">
             <Image src="/logo.png" alt="HackOS" width={840} height={240} className="h-60 w-auto object-contain" />
           </Link>
-          <div className="hidden md:flex items-center gap-12">
-            <Link href="#features" className="text-on-surface-variant hover:text-primary font-bold pb-1 text-body-md transition-colors">Features</Link>
-            <Link href="/solutions" className="text-on-surface-variant hover:text-primary transition-colors text-body-md">Solutions</Link>
-            <Link href="/documentation" className="text-on-surface-variant hover:text-primary transition-colors text-body-md">Documentation</Link>
-          </div>
+          
           <div className="flex items-center gap-4 md:-mr-10 lg:-mr-16">
             <Link href="/auth/organizer">
               <button className="bg-[#D18A8A] border border-white/40 text-white px-6 py-2.5 rounded-xl font-label-md shadow-lg hover:shadow-xl hover:bg-[#C67878] transition-all duration-300">

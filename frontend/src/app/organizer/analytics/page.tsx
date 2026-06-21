@@ -93,7 +93,7 @@ export default function OrganizerAnalytics() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-12 gap-6">
           {/* Left: Detailed Charts */}
-          <div className="col-span-12 lg:col-span-8 space-y-6">
+          <div className="col-span-12 space-y-6">
             {/* Registration & Team Funnels */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bento-card relative overflow-hidden h-[400px]">
@@ -246,97 +246,7 @@ export default function OrganizerAnalytics() {
           </div>
 
           {/* Right: Insights Panel */}
-          <div className="col-span-12 lg:col-span-4 space-y-6">
-            <div className="bento-card bg-surface-container-high/50 border border-outline-variant/20">
-              <h3 className="font-headline-sm text-[24px] text-primary mb-6">Strategic Insights</h3>
-              <div className="space-y-6">
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-primary">eco</span>
-                  </div>
-                  <div>
-                    <h4 className="font-label-md text-[14px] font-bold text-on-surface">Sustainability Surge</h4>
-                    <p className="text-[14px] text-on-surface-variant mt-1">Sustainability remains the most popular track with a 15% increase in high-quality submissions compared to 2023.</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-secondary">code</span>
-                  </div>
-                  <div>
-                    <h4 className="font-label-md text-[14px] font-bold text-on-surface">Skill Gap Identified</h4>
-                    <p className="text-[14px] text-on-surface-variant mt-1">'Frontend Dev' is the most requested skill in the 'Teaming' phase, suggesting a surplus of backend-focused participants.</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-tertiary">psychology</span>
-                  </div>
-                  <div>
-                    <h4 className="font-label-md text-[14px] font-bold text-on-surface">AI/ML Dominance</h4>
-                    <p className="text-[14px] text-on-surface-variant mt-1">The highest performing domain in early evaluations is AI/ML, with an average score of 8.4/10 across all teams.</p>
-                  </div>
-                </div>
-              </div>
-              <hr className="my-8 border-outline-variant/30"/>
-              <div className="space-y-6">
-                <div>
-                  <h4 className="font-label-sm text-[12px] uppercase tracking-widest text-on-surface-variant mb-3">Reviewer Performance</h4>
-                  <div className="p-4 bg-surface rounded-xl border border-outline-variant/20">
-                    <p className="text-[14px] text-on-surface italic">"Current distribution is balanced; however, 3 lead reviewers are at 95% capacity. Suggest shifting 15 pending evals."</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-label-sm text-[12px] uppercase tracking-widest text-on-surface-variant mb-3">Duplicate Detection</h4>
-                  <div className="flex items-center justify-between">
-                    <span className="font-label-md text-[14px]">Flags Today</span>
-                    <span className="bg-error/10 text-error font-bold px-2 py-0.5 rounded text-[12px]">8 New</span>
-                  </div>
-                  <p className="text-[12px] text-on-surface-variant mt-2">Duplicate rate is holding steady at 3.4%, well within the expected 5% threshold for large-scale events.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Workload Mini-Chart */}
-            <div className="bento-card">
-              <h3 className="font-headline-sm text-[24px] text-primary mb-4">Workload Distribution</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-outline-variant flex-shrink-0 overflow-hidden">
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBx4fpQlV1ER8jZGnNw11CK0JN8jkH1UtVRp7VtRkwFD4N8dFj9G3j1It2ofU-6y8D2O8k_Vk6BVrP7dh7WOWhXSTlpzLqyjly_UKZrjTMP5isTZim3urNElgWru12iKefCoUhlTSust0p5r3Wn6Fe5h6lbVYnmI1wzYf-8MTnJB5FeBcTzpLIiF4a6SDVLIFleYpDna94B3QXjDd8Efu0z28ErtOvGINXa5qj1-hypWBLuI0ldrdpUUuUhoOyNzgWNkJtSZYT5fig" alt="Reviewer" />
-                  </div>
-                  <div className="flex-grow">
-                    <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-tertiary h-full" style={{ width: '85%' }}></div>
-                    </div>
-                  </div>
-                  <span className="text-[12px] font-bold w-8 text-right">85%</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-outline-variant flex-shrink-0 overflow-hidden">
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtCfEExWjaNJsRUWwtbBSCrqe5NiTN-n--mQzYoFp8_i-SzEDkXEOOPdsVJRHHy4zK2VNTUZboaXmwvdy5pJG8Zv9jPdvqBQ_rhh5qWR0BBKr0nqH3Tabdj03s06RaIt2OPXkRqxeySkw3joCJU1bOF9-xb315UHsC4bC1GFNGaEynth61E-fudHmTPKKUgUQzV8KA5K8VEaZnQwtQi0c2fr7eHgrjMkdr9hbzXmCznlqRZ6BkM13AzNWCGzBew1Ux8c3-xX10tIk" alt="Reviewer" />
-                  </div>
-                  <div className="flex-grow">
-                    <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-tertiary h-full" style={{ width: '40%' }}></div>
-                    </div>
-                  </div>
-                  <span className="text-[12px] font-bold w-8 text-right">40%</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-outline-variant flex-shrink-0 overflow-hidden">
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrt5SdDe7Y6PGqe9VueyUiOk-G996oXrcj9EIGQOJrTrrDS1wZpR3kcg5sGTBoq-fXMhgxlVBZWFcej0Ik97aukTzj07W-xAnR5owuwF7VRldbUx6CDt3p95VrLNCNIHjSNWZT-Tr8dEBKRMRscT4vtuA9EU8LlDWtI1iMeKZ_LQH_fLtipY1v6v679KbrI-uxz9plv7GaJrFhCrqsAnFauCOKT3zV_XO3GFxZqYCIzdPGZ8btgfcW8MGMj2FqSQZkaUE1_pagsc0" alt="Reviewer" />
-                  </div>
-                  <div className="flex-grow">
-                    <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-tertiary h-full" style={{ width: '65%' }}></div>
-                    </div>
-                  </div>
-                  <span className="text-[12px] font-bold w-8 text-right">65%</span>
-                </div>
-              </div>
-            </div>
-          </div>
+       
         </div>
       </div>
     </div>

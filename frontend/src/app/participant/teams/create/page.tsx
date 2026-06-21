@@ -164,6 +164,43 @@ export default function CreateTeam() {
                 </div>
               </div>
             </div>
+            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-[0_20px_40px_-15px_rgba(214,203,191,0.4)] overflow-hidden">
+              <div className="flex border-b border-outline-variant/10">
+                {["Invite Friends", "By Email", "Requests Sent"].map((tab) => (
+                  <button 
+                    key={tab}
+                    className={`flex-1 py-3 font-label-sm transition-colors ${
+                      activeTab === tab ? "text-primary border-b-2 border-primary" : "text-on-surface-variant hover:text-primary"
+                    }`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+              <div className="p-stack-md">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[18px]">mail</span>
+                      </div>
+                      <span className="font-label-md font-bold text-on-surface">sarah.j@tech.io</span>
+                    </div>
+                    <span className="px-2 py-1 bg-secondary-container/30 text-secondary text-[10px] font-bold rounded-full">Invited</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[18px]">mail</span>
+                      </div>
+                      <span className="font-label-md font-bold text-on-surface">marcus_v@ucla.edu</span>
+                    </div>
+                    <span className="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] font-bold rounded-full">Delivered</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Right Column: Intelligence & Recruitment */}
@@ -236,43 +273,7 @@ export default function CreateTeam() {
             </div>
 
             {/* Recruitment Panel */}
-            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-[0_20px_40px_-15px_rgba(214,203,191,0.4)] overflow-hidden">
-              <div className="flex border-b border-outline-variant/10">
-                {["Invite Friends", "By Email", "Requests Sent"].map((tab) => (
-                  <button 
-                    key={tab}
-                    className={`flex-1 py-3 font-label-sm transition-colors ${
-                      activeTab === tab ? "text-primary border-b-2 border-primary" : "text-on-surface-variant hover:text-primary"
-                    }`}
-                    onClick={() => setActiveTab(tab)}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-              <div className="p-stack-md">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[18px]">mail</span>
-                      </div>
-                      <span className="font-label-md font-bold text-on-surface">sarah.j@tech.io</span>
-                    </div>
-                    <span className="px-2 py-1 bg-secondary-container/30 text-secondary text-[10px] font-bold rounded-full">Invited</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[18px]">mail</span>
-                      </div>
-                      <span className="font-label-md font-bold text-on-surface">marcus_v@ucla.edu</span>
-                    </div>
-                    <span className="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] font-bold rounded-full">Delivered</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            
           </aside>
         </div>
       </main>

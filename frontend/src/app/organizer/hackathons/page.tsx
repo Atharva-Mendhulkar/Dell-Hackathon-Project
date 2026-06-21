@@ -5,6 +5,17 @@ import Link from "next/link";
 export default function HackathonsListPage() {
   return (
     <div className="p-8 max-w-7xl mx-auto min-h-[calc(100vh-64px)]">
+      <div className="flex justify-between items-center mb-6">
+  <Link href="/">
+    <button className="text-primary font-medium hover:underline">
+      ← Back to Home
+    </button>
+  </Link>
+
+  <button className="text-red-600 font-medium">
+    Sign Out
+  </button>
+</div>
       <div className="flex justify-between items-end mb-8">
         <div>
           <h2 className="font-headline-md text-[32px] text-primary font-bold">Your Hackathons</h2>
@@ -17,7 +28,32 @@ export default function HackathonsListPage() {
           </button>
         </Link>
       </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+  <div className="bg-white p-4 rounded-xl shadow-sm border">
+    <p className="text-xs uppercase">Hackathons</p>
+    <h3 className="text-2xl font-bold">2</h3>
+  </div>
 
+  <div className="bg-white p-4 rounded-xl shadow-sm border">
+    <p className="text-xs uppercase">Active</p>
+    <h3 className="text-2xl font-bold">1</h3>
+  </div>
+
+  <div className="bg-white p-4 rounded-xl shadow-sm border">
+    <p className="text-xs uppercase">Registrations</p>
+    <h3 className="text-2xl font-bold">4,852</h3>
+  </div>
+
+  <div className="bg-white p-4 rounded-xl shadow-sm border">
+    <p className="text-xs uppercase">Submissions</p>
+    <h3 className="text-2xl font-bold">1,240</h3>
+  </div>
+
+  <div className="bg-white p-4 rounded-xl shadow-sm border">
+    <p className="text-xs uppercase">Reviewers</p>
+    <h3 className="text-2xl font-bold">45</h3>
+  </div>
+</div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Hackathon Card 1 */}
         <Link href="/organizer/hackathons/winter-2024" className="block group">
@@ -69,6 +105,33 @@ export default function HackathonsListPage() {
           </div>
         </Link>
       </div>
+      <div className="mt-10">
+  <h3 className="font-headline-sm text-[18px] text-primary font-bold mb-4">
+    Reach & Engagement
+  </h3>
+
+  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="bg-white p-5 rounded-xl border shadow-sm">
+      <p>Total Reach</p>
+      <h3 className="text-3xl font-bold">52K</h3>
+    </div>
+
+    <div className="bg-white p-5 rounded-xl border shadow-sm">
+      <p>Registrations</p>
+      <h3 className="text-3xl font-bold">4,852</h3>
+    </div>
+
+    <div className="bg-white p-5 rounded-xl border shadow-sm">
+      <p>Teams Formed</p>
+      <h3 className="text-3xl font-bold">720</h3>
+    </div>
+
+    <div className="bg-white p-5 rounded-xl border shadow-sm">
+      <p>Submission Rate</p>
+      <h3 className="text-3xl font-bold">72%</h3>
+    </div>
+  </div>
+</div> 
     </div>
   );
 }

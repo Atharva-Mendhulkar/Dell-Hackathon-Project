@@ -159,75 +159,7 @@ export default function ParticipantDashboard() {
           </div>
 
           {/* AI Recommended Hackathons */}
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-[20px] font-bold">Upcoming Hackathons</h2>
-              {participantVector && (
-                <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-[12px] font-bold flex items-center gap-1.5 border border-primary/20">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  AI Matchmaking Active
-                </span>
-              )}
-            </div>
-            
-            <div className="space-y-4">
-              {sortedHackathons.map((hackathon, index) => {
-                const isBestMatch = index === 0 && hackathon.matchScore > 50;
-                
-                return (
-                  <div key={hackathon.id} className={`bg-white rounded-2xl border ${isBestMatch ? 'border-primary shadow-md' : 'border-outline-variant/30 shadow-sm'} p-6 transition-all hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden`}>
-                    
-                    {isBestMatch && (
-                      <div className="absolute top-0 right-0 bg-primary text-white text-[11px] font-bold px-4 py-1 rounded-bl-xl tracking-wider uppercase shadow-sm">
-                        Top Recommendation
-                      </div>
-                    )}
-                    
-                    <div className="flex-1 pt-2 md:pt-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider border ${hackathon.tagColor}`}>
-                          {hackathon.prizePool}
-                        </span>
-                        <div className="flex items-center gap-1.5 text-on-surface-variant text-[13px] font-medium">
-                          <CalendarIcon className="w-4 h-4" />
-                          {hackathon.date}
-                        </div>
-                      </div>
-                      <h3 className="text-[20px] font-bold text-on-surface mb-1">{hackathon.title}</h3>
-                      <p className="text-[14px] text-on-surface-variant line-clamp-2 mb-3">{hackathon.description}</p>
-                      
-                      <div className="flex flex-wrap gap-1.5">
-                        {Object.entries(hackathon.targetSkills).sort((a, b) => b[1] - a[1]).map(([skill], i) => (
-                          <span key={i} className="px-2 py-0.5 bg-surface-container-high border border-outline-variant/30 text-on-surface-variant text-[10px] font-bold uppercase tracking-wider rounded">
-                            {skill.replace('_', ' ')}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col md:items-end gap-3 shrink-0 mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-outline-variant/20">
-                      {hackathon.matchScore > 0 && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Match Score</span>
-                          <span className={`text-[18px] font-bold ${isBestMatch ? 'text-primary' : 'text-on-surface'}`}>
-                            {hackathon.matchScore}%
-                          </span>
-                        </div>
-                      )}
-                      
-                      <button className={`px-6 py-2.5 rounded-xl font-bold text-[14px] transition-colors w-full md:w-auto ${
-                        isBestMatch 
-                          ? 'bg-primary text-white hover:bg-primary/90' 
-                          : 'bg-surface-container-low text-primary border border-primary/20 hover:bg-primary/5'
-                      }`}>
-                        Register Now
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          
         </div>
 
         <div>

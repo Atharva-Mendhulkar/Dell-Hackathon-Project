@@ -10,22 +10,13 @@ export default function Sidebar() {
         <p className="font-label-sm text-[12px] text-white/70 ml-1 opacity-80">Organizer Portal</p>
       </div>
       <nav className="flex-1 space-y-2">
-        <Link href="/organizer/dashboard" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
-          <span className="material-symbols-outlined">dashboard</span>
-          <span className="font-label-md text-label-md">Dashboard</span>
-        </Link>
+        
         <Link href="/organizer/hackathons" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
           <span className="material-symbols-outlined">event_available</span>
           <span className="font-label-md text-label-md">Hackathons</span>
         </Link>
-        <Link href="/organizer/registrations" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
-          <span className="material-symbols-outlined">group</span>
-          <span className="font-label-md text-label-md">Participants</span>
-        </Link>
-        <Link href="/organizer/reviewers" className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200">
-          <span className="material-symbols-outlined">folder_open</span>
-          <span className="font-label-md text-label-md">Reviewers</span>
-        </Link>
+        
+      
       </nav>
       <div className="mt-auto px-2 pb-4">
         <Link href="/organizer/hackathons/create/step-1" className="block w-full">

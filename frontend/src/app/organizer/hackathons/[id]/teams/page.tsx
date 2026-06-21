@@ -464,28 +464,14 @@ export default function HackathonTeams() {
                     <span>Unassigned Teams</span>
                     <span className="text-error">18</span>
                   </div>
-                  <button className="w-full mt-2 py-2 border border-tertiary/30 text-tertiary rounded-xl font-bold text-[12px] hover:bg-tertiary/5 transition-colors">
-                    Auto-Balance Reviews
-                  </button>
+                  
                 </div>
               </div>
             </div>
           </div>
-
+</aside>
           {/* Pro-Tip Card */}
-          <div className="bg-primary p-6 rounded-[24px] text-on-primary shadow-xl shadow-primary/10 relative overflow-hidden">
-            <div className="relative z-10">
-              <span className="material-symbols-outlined text-[32px] mb-4">lightbulb</span>
-              <h6 className="font-headline-sm text-[20px] font-bold mb-2 leading-tight">Matchmaking Insight</h6>
-              <p className="text-[12px] font-medium opacity-90 leading-relaxed mb-4">We found 8 registered developers with ML skills who haven't joined a team yet. "AquaLoop" is currently looking for exactly that profile.</p>
-              <button className="bg-white text-primary px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-surface-container-low transition-colors">Run Matchmaker</button>
-            </div>
-            <div className="absolute -right-10 -bottom-10 opacity-20 transform rotate-12 pointer-events-none">
-              <span className="material-symbols-outlined text-[160px]">insights</span>
-            </div>
-          </div>
-        </aside>
-      </div>
+          
 
       {/* Floating Action Button (for global action) */}
       <div className="fixed bottom-8 right-8 flex flex-col gap-4 z-50">
@@ -494,6 +480,7 @@ export default function HackathonTeams() {
           <span className="absolute right-full mr-4 bg-surface text-on-surface px-3 py-1 rounded shadow text-[12px] font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Contact All Leads</span>
         </button>
       </div>
+    </div>
     </div>
   );
 }
