@@ -112,8 +112,8 @@ export default function FairnessDashboard() {
               <p>Loading alerts...</p>
             ) : alerts.length === 0 ? (
               <p className="text-on-surface-variant">No statistical bias alerts found.</p>
-            ) : alerts.map(alert => (
-              <div key={alert.id} className={`bg-white rounded-3xl p-6 border-l-8 shadow-sm ${
+            ) : alerts.map((alert, idx) => (
+              <div key={alert.alert_id || alert.id || idx} className={`bg-white rounded-3xl p-6 border-l-8 shadow-sm ${
                 alert.severity === 'HIGH' ? 'border-l-error' : 
                 alert.severity === 'MEDIUM' ? 'border-l-secondary' : 'border-l-tertiary'
               }`}>

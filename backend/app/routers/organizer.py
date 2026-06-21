@@ -94,21 +94,33 @@ from app.services.ai.pipelines.reporting.pitch_generator import generate_success
 
 @router.post("/generate-promo/{hackathon_id}")
 async def generate_promo_content(hackathon_id: str, db: Session = Depends(get_db)):
-    hackathon = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
+    import uuid
+    try:
+        uid = uuid.UUID(hackathon_id)
+        hackathon = db.query(Hackathon).filter(Hackathon.id == uid).first()
+    except ValueError:
+        hackathon = None
+        
     if not hackathon:
         raise HTTPException(status_code=404, detail="Hackathon not found")
     
     problem_statements = db.query(ProblemStatement).all()
     
     try:
-        content = generate_promotional_content(hackathon, problem_statements)
+        content = await generate_promotional_content(hackathon, problem_statements)
         return content
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/generate-success-report/{hackathon_id}")
 async def generate_report(hackathon_id: str, db: Session = Depends(get_db)):
-    hackathon = db.query(Hackathon).filter(Hackathon.id == hackathon_id).first()
+    import uuid
+    try:
+        uid = uuid.UUID(hackathon_id)
+        hackathon = db.query(Hackathon).filter(Hackathon.id == uid).first()
+    except ValueError:
+        hackathon = None
+
     if not hackathon:
         raise HTTPException(status_code=404, detail="Hackathon not found")
         
@@ -121,7 +133,7 @@ async def generate_report(hackathon_id: str, db: Session = Depends(get_db)):
     }
     
     try:
-        report = generate_success_report(hackathon, stats)
+        report = await generate_success_report(hackathon, stats)
         return report
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { use } from "react";
+import { use, useState } from "react";
 
 export default function HackathonLayout({
   children,
@@ -14,6 +14,7 @@ export default function HackathonLayout({
   const pathname = usePathname();
   const resolvedParams = use(params);
   const id = resolvedParams.id || "winter-2024";
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const navLinks = [
     { name: "Overview", href: `/organizer/hackathons/${id}`, icon: "dashboard" },
@@ -23,6 +24,8 @@ export default function HackathonLayout({
     { name: "Reviewers", href: `/organizer/hackathons/${id}/reviewers`, icon: "rate_review" },
     { name: "Evaluations", href: `/organizer/hackathons/${id}/evaluations`, icon: "assignment_turned_in" },
     { name: "Analytics", href: `/organizer/hackathons/${id}/analytics`, icon: "analytics" },
+    { name: "Fairness Engine", href: `/organizer/hackathons/${id}/fairness`, icon: "gavel" },
+    { name: "Audit Trail", href: `/organizer/hackathons/${id}/audit`, icon: "shield" },
     { name: "Promo Tools", href: `/organizer/hackathons/${id}/promo`, icon: "campaign" },
   ];
 
@@ -37,6 +40,27 @@ export default function HackathonLayout({
           <div className="h-4 w-px bg-outline-variant/50"></div>
           <h1 className="font-headline-sm text-[24px] text-primary font-bold">Winter 2024 Tech Bloom</h1>
           <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase tracking-wider">Live</span>
+          
+          <div className="ml-auto flex items-center gap-4">
+            <div className="relative">
+              <button 
+                onClick={() => setIsProfileOpen(!isProfileOpen)} 
+                className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors"
+              >
+                <span className="material-symbols-outlined text-primary">person</span>
+              </button>
+              {isProfileOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-outline-variant/20 py-2">
+                  <Link href="/">
+                    <button className="w-full text-left px-4 py-2 hover:bg-surface-variant/50 text-sm flex items-center gap-2 text-error">
+                      <span className="material-symbols-outlined text-[18px]">logout</span>
+                      Logout
+                    </button>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
         
         {/* Secondary Navigation Tabs */}
